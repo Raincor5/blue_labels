@@ -5,3 +5,6 @@ uvicorn
 opencv-python
 numpy
 websockets
+pillow
+tkinter
+torchvision 
