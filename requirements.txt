@@ -1,10 +1,32 @@
-fastapi
-ultralytics
-torch
-uvicorn
-opencv-python
-numpy
-websockets
-pillow
-tkinter
-torchvision 
+# Requirements for YOLO+OCR Pipeline
+
+# Core dependencies
+fastapi>=0.104.0
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+uvicorn[standard]>=0.20.0
+websockets>=11.0.0
+
+# Computer vision and image processing
+opencv-python>=4.8.0
+numpy>=1.24.0
+pillow>=9.5.0
+
+# OCR dependencies
+easyocr>=1.7.0
+
+# Client GUI (optional - only needed for the client)
+# Uncomment if you need the GUI client
+# tkinter is usually included with Python
+# For some systems you might need:
+# python3-tk
+
+# Additional OCR libraries (optional alternatives)
+# pytesseract>=0.3.10  # Alternative OCR engine
+# paddleocr>=2.7.0     # Another OCR option
+
+# Development and debugging (optional)
+# jupyter>=1.0.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0

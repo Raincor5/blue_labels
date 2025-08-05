@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO+OCR Pipeline Web Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #2a5298;
+            font-size: 1.4rem;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        /* Connection Panel */
+        .connection-panel {
+            margin-bottom: 20px;
+        }
+
+        .connection-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .connection-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        /* Display Area */
+        .display-area {
+            text-align: center;
+        }
+
+        .image-container {
+            position: relative;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .image-container.has-image {
+            border: none;
+            background: transparent;
+        }
+
+        .display-image {
+            max-width: 100%;
+            max-height: 600px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .placeholder-text {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        /* Performance Metrics */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Results Panel */
+        .results-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .ocr-results {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .detection-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2a5298;
+        }
+
+        .detection-header {
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+
+        .ocr-text {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 8px 0;
+            font-family: monospace;
+        }
+
+        .confidence {
+            font-size: 0.9rem;
+            color: #666;
+            float: right;
+        }
+
+        .logs {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-timestamp {
+            color: #a0aec0;
+        }
+
+        .log-error {
+            color: #fed7d7;
+        }
+
+        .log-success {
+            color: #9ae6b4;
+        }
+
+        /* Settings */
+        .settings-group {
+            margin-bottom: 20px;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2a5298;
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2a5298;
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Webcam */
+        .webcam-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .webcam-select {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .connection-form {
+                flex-direction: column;
+            }
+            
+            .connection-form input {
+                min-width: auto;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+            
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 YOLO+OCR Pipeline</h1>
+            <p>Real-time Object Detection & Text Recognition</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Main Display Area -->
+            <div class="card">
+                <h2>📸 Live Detection View</h2>
+                
+                <!-- Connection Status -->
+                <div class="connection-panel">
+                    <div class="connection-form">
+                        <input type="text" id="serverUrl" placeholder="WebSocket Server URL" value="ws://localhost:8000/ws">
+                        <button class="btn btn-primary" id="connectBtn" onclick="toggleConnection()">Connect</button>
+                    </div>
+                    <div id="connectionStatus" class="status disconnected">
+                        🔴 Disconnected
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls">
+                    <div class="file-input-wrapper">
+                        <button class="btn btn-secondary">📁 Upload Image</button>
+                        <input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(this)">
+                    </div>
+                    
+                    <div class="webcam-controls">
+                        <select id="cameraSelect" class="webcam-select">
+                            <option value="0">Camera 0</option>
+                            <option value="1">Camera 1</option>
+                            <option value="2">Camera 2</option>
+                        </select>
+                        <button class="btn btn-success" id="startWebcamBtn" onclick="startWebcam()">📹 Start Webcam</button>
+                        <button class="btn btn-danger" id="stopWebcamBtn" onclick="stopWebcam()" style="display: none;">⏹️ Stop Webcam</button>
+                    </div>
+                </div>
+
+                <!-- Image Display -->
+                <div class="image-container" id="imageContainer">
+                    <div class="placeholder-text">
+                        Connect to server and upload an image or start webcam
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="fpsValue">0.0</div>
+                        <div class="metric-label">FPS</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="yoloTime">0</div>
+                        <div class="metric-label">YOLO (ms)</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="ocrTime">0</div>
+                        <div class="metric-label">OCR (ms)</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="totalTime">0</div>
+                        <div class="metric-label">Total (ms)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="card">
+                <h2>📊 Results & Controls</h2>
+                
+                <!-- Tabs -->
+                <div class="results-tabs">
+                    <button class="tab-btn active" onclick="switchTab('ocr')">📝 OCR Results</button>
+                    <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
+                    <button class="tab-btn" onclick="switchTab('logs')">📋 Logs</button>
+                </div>
+
+                <!-- OCR Results Tab -->
+                <div id="ocrTab" class="tab-content active">
+                    <div class="ocr-results" id="ocrResults">
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            No OCR results yet. Upload an image or start webcam to begin.
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-secondary" onclick="clearOCRResults()">🗑️ Clear Results</button>
+                        <button class="btn btn-secondary" onclick="exportOCRText()">💾 Export Text</button>
+                        <button class="btn btn-secondary" onclick="copyAllText()">📋 Copy All</button>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settingsTab" class="tab-content">
+                    <div class="settings-group">
+                        <label>YOLO Confidence Threshold:</label>
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="yoloConfidence" min="0.1" max="1.0" step="0.05" value="0.5">
+                            <span class="slider-value" id="yoloConfValue">0.50</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>OCR Confidence Threshold:</label>
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="ocrConfidence" min="0.1" max="1.0" step="0.05" value="0.3">
+                            <span class="slider-value" id="ocrConfValue">0.30</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="enableOCR" checked> Enable OCR Processing
+                        </label>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="showRegions"> Show Extracted Regions
+                        </label>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>Webcam Frame Rate:</label>
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="frameRate" min="1" max="30" step="1" value="10">
+                            <span class="slider-value" id="frameRateValue">10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div id="logsTab" class="tab-content">
+                    <div class="logs" id="logsContainer">
+                        <div class="log-entry">
+                            <span class="log-timestamp">[System]</span> Web client initialized
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Clear Logs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let websocket = null;
+        let isConnected = false;
+        let webcamStream = null;
+        let isWebcamRunning = false;
+        let frameInterval = null;
+        let fpsCounter = 0;
+        let fpsStartTime = Date.now();
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateConnectionUI(false);
+        });
+
+        function setupEventListeners() {
+            // Slider updates
+            document.getElementById('yoloConfidence').addEventListener('input', function() {
+                document.getElementById('yoloConfValue').textContent = parseFloat(this.value).toFixed(2);
+            });
+
+            document.getElementById('ocrConfidence').addEventListener('input', function() {
+                document.getElementById('ocrConfValue').textContent = parseFloat(this.value).toFixed(2);
+            });
+
+            document.getElementById('frameRate').addEventListener('input', function() {
+                document.getElementById('frameRateValue').textContent = this.value;
+            });
+
+            // Enter key for connection
+            document.getElementById('serverUrl').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    toggleConnection();
+                }
+            });
+        }
+
+        function toggleConnection() {
+            if (isConnected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('serverUrl').value;
+            
+            try {
+                websocket = new WebSocket(url);
+                
+                websocket.onopen = function() {
+                    isConnected = true;
+                    updateConnectionUI(true);
+                    logMessage('Connected to server', 'success');
+                };
+
+                websocket.onmessage = function(event) {
+                    handleWebSocketMessage(event.data);
+                };
+
+                websocket.onclose = function() {
+                    isConnected = false;
+                    updateConnectionUI(false);
+                    logMessage('Disconnected from server', 'error');
+                };
+
+                websocket.onerror = function(error) {
+                    logMessage('WebSocket error: ' + error.message, 'error');
+                };
+
+            } catch (error) {
+                logMessage('Connection failed: ' + error.message, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+            stopWebcam();
+            isConnected = false;
+            updateConnectionUI(false);
+        }
+
+        function updateConnectionUI(connected) {
+            const status = document.getElementById('connectionStatus');
+            const btn = document.getElementById('connectBtn');
+
+            if (connected) {
+                status.className = 'status connected';
+                status.innerHTML = '🟢 Connected';
+                btn.textContent = 'Disconnect';
+                btn.className = 'btn btn-danger';
+            } else {
+                status.className = 'status disconnected';
+                status.innerHTML = '🔴 Disconnected';
+                btn.textContent = 'Connect';
+                btn.className = 'btn btn-primary';
+            }
+        }
+
+        function handleWebSocketMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                
+                switch (message.type) {
+                    case 'pipeline_result':
+                        handlePipelineResult(message);
+                        break;
+                    case 'info':
+                        logMessage('Server: ' + message.message);
+                        break;
+                    case 'error':
+                        logMessage('Server error: ' + message.message, 'error');
+                        break;
+                    case 'pong':
+                        logMessage('Server pong received');
+                        break;
+                    default:
+                        logMessage('Unknown message type: ' + message.type);
+                }
+            } catch (error) {
+                logMessage('Failed to parse server message: ' + error.message, 'error');
+            }
+        }
+
+        function handlePipelineResult(result) {
+            // Update performance metrics
+            const timing = result.timing || {};
+            updateMetrics(0, timing.yolo_ms || 0, timing.ocr_ms || 0, timing.total_ms || 0);
+
+            // Display annotated image
+            if (result.annotated_image) {
+                displayImage('data:image/jpeg;base64,' + result.annotated_image);
+            }
+
+            // Update OCR results
+            updateOCRResults(result.yolo_detections || [], result.ocr_results || {});
+
+            logMessage(`Processed: ${result.yolo_detections?.length || 0} detections, ${Object.keys(result.ocr_results || {}).length} OCR results`);
+        }
+
+        function updateMetrics(fps, yoloMs, ocrMs, totalMs) {
+            if (fps > 0) document.getElementById('fpsValue').textContent = fps.toFixed(1);
+            if (yoloMs > 0) document.getElementById('yoloTime').textContent = Math.round(yoloMs);
+            if (ocrMs > 0) document.getElementById('ocrTime').textContent = Math.round(ocrMs);
+            if (totalMs > 0) document.getElementById('totalTime').textContent = Math.round(totalMs);
+        }
+
+        function updateOCRResults(detections, ocrResults) {
+            const container = document.getElementById('ocrResults');
+            
+            if (detections.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No detections found</div>';
+                return;
+            }
+
+            let html = '';
+            detections.forEach((detection, index) => {
+                const ocrData = ocrResults[index] || [];
+                
+                html += `
+                    <div class="detection-item fade-in">
+                        <div class="detection-header">
+                            Detection ${index + 1}: ${detection.class_name}
+                            <span class="confidence">Confidence: ${(detection.confidence * 100).toFixed(1)}%</span>
+                        </div>
+                `;
+
+                if (ocrData.length > 0) {
+                    ocrData.forEach((ocr, ocrIndex) => {
+                        html += `
+                            <div class="ocr-text">
+                                <strong>Text ${ocrIndex + 1}:</strong> "${ocr.text}"
+                                <span class="confidence">OCR Confidence: ${(ocr.confidence * 100).toFixed(1)}%</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<div style="color: #666; font-style: italic;">No text detected in this region</div>';
+                }
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function displayImage(src) {
+            const container = document.getElementById('imageContainer');
+            container.innerHTML = `<img src="${src}" alt="Detection Result" class="display-image fade-in">`;
+            container.classList.add('has-image');
+        }
+
+        function uploadImage(input) {
+            if (!isConnected) {
+                alert('Please connect to server first');
+                return;
+            }
+
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                    sendImageToServer(base64, `Upload: ${file.name}`);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function startWebcam() {
+            if (!isConnected) {
+                alert('Please connect to server first');
+                return;
+            }
+
+            const cameraIndex = parseInt(document.getElementById('cameraSelect').value);
+            
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    deviceId: cameraIndex ? { exact: cameraIndex } : undefined,
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
+            })
+            .then(stream => {
+                webcamStream = stream;
+                isWebcamRunning = true;
+                
+                document.getElementById('startWebcamBtn').style.display = 'none';
+                document.getElementById('stopWebcamBtn').style.display = 'inline-block';
+                
+                startFrameCapture();
+                logMessage('Webcam started', 'success');
+            })
+            .catch(error => {
+                logMessage('Failed to start webcam: ' + error.message, 'error');
+            });
+        }
+
+        function stopWebcam() {
+            isWebcamRunning = false;
+            
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+            }
+            
+            if (frameInterval) {
+                clearInterval(frameInterval);
+                frameInterval = null;
+            }
+            
+            document.getElementById('startWebcamBtn').style.display = 'inline-block';
+            document.getElementById('stopWebcamBtn').style.display = 'none';
+            
+            logMessage('Webcam stopped');
+        }
+
+        function startFrameCapture() {
+            const frameRate = parseInt(document.getElementById('frameRate').value);
+            const interval = 1000 / frameRate;
+            
+            frameInterval = setInterval(() => {
+                if (!isWebcamRunning || !webcamStream) return;
+                
+                captureFrame();
+            }, interval);
+        }
+
+        function captureFrame() {
+            const video = document.createElement('video');
+            video.srcObject = webcamStream;
+            video.play();
+            
+            video.onloadedmetadata = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+                
+                const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                sendImageToServer(base64, 'Webcam');
+                
+                // Calculate FPS
+                fpsCounter++;
+                if (fpsCounter >= 10) {
+                    const fps = fpsCounter / ((Date.now() - fpsStartTime) / 1000);
+                    updateMetrics(fps, 0, 0, 0);
+                    fpsCounter = 0;
+                    fpsStartTime = Date.now();
+                }
+            };
+        }
+
+        function sendImageToServer(base64Data, source) {
+            if (!websocket || !isConnected) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+
+            try {
+                websocket.send(base64Data);
+                logMessage(`Sent image from ${source}`);
+            } catch (error) {
+                logMessage('Failed to send image: ' + error.message, 'error');
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        function clearOCRResults() {
+            document.getElementById('ocrResults').innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">OCR results cleared</div>';
+            logMessage('OCR results cleared');
+        }
+
+        function exportOCRText() {
+            const results = document.getElementById('ocrResults');
+            const textElements = results.querySelectorAll('.ocr-text');
+            
+            let exportText = '=== OCR Export ===\n';
+            exportText += `Timestamp: ${new Date().toLocaleString()}\n\n`;
+            
+            textElements.forEach((element, index) => {
+                const text = element.textContent.replace(/OCR Confidence:.*/, '').trim();
+                exportText += `${index + 1}. ${text}\n`;
+            });
+            
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ocr_results_${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logMessage('OCR text exported', 'success');
+        }
+
+        function copyAllText() {
+            const results = document.getElementById('ocrResults');
+            const textElements = results.querySelectorAll('.ocr-text');
+            
+            let allText = '';
+            textElements.forEach(element => {
+                const text = element.textContent.replace(/Text \d+: "|OCR Confidence:.*/, '').trim();
+                if (text) allText += text + '\n';
+            });
+            
+            if (allText) {
+                navigator.clipboard.writeText(allText).then(() => {
+                    logMessage('Text copied to clipboard', 'success');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = allText;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    logMessage('Text copied to clipboard', 'success');
+                });
+            } else {
+                logMessage('No text to copy', 'error');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logsContainer').innerHTML = '<div class="log-entry"><span class="log-timestamp">[System]</span> Logs cleared</div>';
+        }
+
+        function logMessage(message, type = 'info') {
+            const container = document.getElementById('logsContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            let className = 'log-entry';
+            let icon = 'ℹ️';
+            
+            switch (type) {
+                case 'error':
+                    className += ' log-error';
+                    icon = '❌';
+                    break;
+                case 'success':
+                    className += ' log-success';
+                    icon = '✅';
+                    break;
+                default:
+                    icon = 'ℹ️';
+            }
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = className;
+            logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${icon} ${message}`;
+            
+            container.appendChild(logEntry);
+            container.scrollTop = container.scrollHeight;
+            
+            // Keep only last 100 log entries
+            const entries = container.querySelectorAll('.log-entry');
+            if (entries.length > 100) {
+                entries[0].remove();
+            }
+        }
+
+        // Ping server periodically to keep connection alive
+        setInterval(() => {
+            if (websocket && isConnected) {
+                try {
+                    websocket.send('ping');
+                } catch (error) {
+                    logMessage('Ping failed: ' + error.message, 'error');
+                }
+            }
+        }, 30000); // Ping every 30 seconds
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isWebcamRunning) {
+                // Pause webcam when tab is hidden to save resources
+                logMessage('Tab hidden - webcam paused');
+            } else if (!document.hidden && isWebcamRunning) {
+                logMessage('Tab visible - webcam resumed');
+            }
+        });
+
+        // Handle window beforeunload
+        window.addEventListener('beforeunload', () => {
+            if (websocket) {
+                websocket.close();
+            }
+            stopWebcam();
+        });
+
+        // Touch/mobile support for file upload
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.closest('.file-input-wrapper')) {
+                e.target.closest('.file-input-wrapper').querySelector('input[type=file]').click();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + U for upload
+            if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+                e.preventDefault();
+                document.getElementById('imageUpload').click();
+            }
+            
+            // Ctrl/Cmd + W for webcam toggle
+            if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+                e.preventDefault();
+                if (isWebcamRunning) {
+                    stopWebcam();
+                } else {
+                    startWebcam();
+                }
+            }
+            
+            // Space for connect/disconnect
+            if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                toggleConnection();
+            }
+        });
+
+        // Auto-resize image container based on content
+        function resizeImageContainer() {
+            const container = document.getElementById('imageContainer');
+            const img = container.querySelector('img');
+            
+            if (img) {
+                img.addEventListener('load', function() {
+                    const maxHeight = window.innerHeight * 0.6;
+                    if (this.naturalHeight > maxHeight) {
+                        container.style.maxHeight = maxHeight + 'px';
+                    }
+                });
+            }
+        }
+
+        // Call resize function when needed
+        const observer = new MutationObserver(resizeImageContainer);
+        observer.observe(document.getElementById('imageContainer'), { childList: true });
+
+        // Performance monitoring
+        let performanceStats = {
+            totalRequests: 0,
+            avgYoloTime: 0,
+            avgOcrTime: 0,
+            avgTotalTime: 0
+        };
+
+        function updatePerformanceStats(yoloMs, ocrMs, totalMs) {
+            performanceStats.totalRequests++;
+            
+            // Calculate running averages
+            const n = performanceStats.totalRequests;
+            performanceStats.avgYoloTime = ((n - 1) * performanceStats.avgYoloTime + yoloMs) / n;
+            performanceStats.avgOcrTime = ((n - 1) * performanceStats.avgOcrTime + ocrMs) / n;
+            performanceStats.avgTotalTime = ((n - 1) * performanceStats.avgTotalTime + totalMs) / n;
+            
+            // Update UI every 10 requests
+            if (n % 10 === 0) {
+                logMessage(`Performance stats: Avg YOLO: ${performanceStats.avgYoloTime.toFixed(1)}ms, Avg OCR: ${performanceStats.avgOcrTime.toFixed(1)}ms, Total requests: ${n}`);
+            }
+        }
+
+        // Enhanced error handling for WebSocket
+        function handleWebSocketError(error) {
+            console.error('WebSocket error:', error);
+            
+            // Attempt to reconnect after a delay
+            if (isConnected) {
+                logMessage('Connection lost. Attempting to reconnect...', 'error');
+                setTimeout(() => {
+                    if (!isConnected) {
+                        connect();
+                    }
+                }, 3000);
+            }
+        }
+
+        // Add service worker for offline support (optional)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.log('Service worker registration failed:', err);
+            });
+        }
+
+        // Initialize tooltips and help text
+        function initializeTooltips() {
+            const tooltips = {
+                'yoloConfidence': 'Minimum confidence threshold for YOLO detections (0.1 = very sensitive, 1.0 = very strict)',
+                'ocrConfidence': 'Minimum confidence threshold for OCR text recognition',
+                'frameRate': 'Webcam processing frame rate (higher = more responsive but uses more resources)',
+                'enableOCR': 'Enable or disable OCR text recognition processing',
+                'showRegions': 'Show extracted text regions in results (useful for debugging)'
+            };
+            
+            Object.entries(tooltips).forEach(([id, text]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.title = text;
+                }
+            });
+        }
+
+        // Call initialization functions
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTooltips();
+            
+            // Add some example text to help users get started
+            setTimeout(() => {
+                if (!isConnected) {
+                    logMessage('💡 Tip: Make sure your YOLO+OCR server is running on the specified URL');
+                    logMessage('💡 Default server URL is ws://localhost:8000/ws');
+                    logMessage('💡 Use Ctrl+U to upload images, Ctrl+W for webcam, Space to connect');
+                }
+            }, 2000);
+        });
+
+        // Add drag and drop support for images
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('imageContainer').style.borderColor = '#2a5298';
+            document.getElementById('imageContainer').style.backgroundColor = 'rgba(42, 82, 152, 0.1)';
+        });
+
+        document.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('imageContainer').style.borderColor = '#dee2e6';
+            document.getElementById('imageContainer').style.backgroundColor = '#f8f9fa';
+        });
+
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            document.getElementById('imageContainer').style.borderColor = '#dee2e6';
+            document.getElementById('imageContainer').style.backgroundColor = '#f8f9fa';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                const input = document.getElementById('imageUpload');
+                input.files = files;
+                uploadImage(input);
+                logMessage('Image dropped and uploaded', 'success');
+            } else {
+                logMessage('Please drop a valid image file', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
