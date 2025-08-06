@@ -6,6 +6,7 @@ import webbrowser
 import threading
 import time
 from pathlib import Path
+import ssl
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -25,7 +26,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Custom logging
         print(f"[{time.strftime('%H:%M:%S')}] {format % args}")
 
-def start_web_server(port=8080, directory=None):
+def start_web_server(port=8080, directory=None, use_https=False):
     """Start a simple HTTP server to serve the web client"""
     
     if directory is None:
@@ -33,31 +34,22 @@ def start_web_server(port=8080, directory=None):
     
     # Change to the directory containing the web client
     os.chdir(directory)
+
+    handler = CustomHTTPRequestHandler
     
     # Create the server
-    with socketserver.TCPServer(("", port), CustomHTTPRequestHandler) as httpd:
-        print(f"🌐 Starting web server on port {port}")
-        print(f"📁 Serving files from: {directory}")
-        print(f"🔗 Web Client URL: http://localhost:{port}")
-        print(f"🔗 Network URL: http://{get_local_ip()}:{port}")
-        print("\n" + "="*50)
-        print("📱 Access from any device on your network!")
-        print("🖥️  Desktop: http://localhost:8080")
-        print(f"📱 Mobile/Tablet: http://{get_local_ip()}:8080")
-        print("="*50 + "\n")
-        
-        # Auto-open browser after a short delay
-        def open_browser():
-            time.sleep(1)
-            try:
-                webbrowser.open(f'http://localhost:{port}')
-                print("🚀 Browser opened automatically")
-            except Exception as e:
-                print(f"⚠️  Could not open browser automatically: {e}")
-        
-        browser_thread = threading.Thread(target=open_browser, daemon=True)
-        browser_thread.start()
-        
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        if use_https:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+            httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+            print(f"🔒 HTTPS enabled on port {port}")
+        else:
+            print(f"🌐 HTTP running on port {port}")
+
+        print(f"Serving from {directory}")
+        print(f"Access at {'https' if use_https else 'http'}://{get_local_ip()}:{port}")
+
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
@@ -115,6 +107,7 @@ def main():
     parser.add_argument("--port", type=int, default=8080, help="Port to serve on (default: 8080)")
     parser.add_argument("--directory", help="Directory to serve files from (default: current directory)")
     parser.add_argument("--create-client", action="store_true", help="Create placeholder web client file")
+    parser.add_argument("--https", action="store_true", help="Enable HTTPS")
     
     args = parser.parse_args()
     
@@ -123,7 +116,7 @@ def main():
         return
     
     try:
-        start_web_server(args.port, args.directory)
+        start_web_server(args.port, args.directory, use_https=args.https)
     except OSError as e:
         if "Address already in use" in str(e):
             print(f"❌ Port {args.port} is already in use. Try a different port:")

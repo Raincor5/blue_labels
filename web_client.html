@@ -95,6 +95,9 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: inline-block;
+            text-decoration: none;
+            text-align: center;
         }
 
         .btn-primary {
@@ -165,6 +168,9 @@
         .file-input-wrapper input[type=file] {
             position: absolute;
             left: -9999px;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
         }
 
         /* Display Area */
@@ -390,6 +396,16 @@
             border-radius: 5px;
         }
 
+        /* Webcam Video */
+        .webcam-video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: none;
+        }
+
         /* Responsive Design */
         @media (max-width: 1024px) {
             .main-grid {
@@ -466,6 +482,25 @@
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
+
+        /* Safari-specific fixes */
+        .webcam-permission-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .safari-notice {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: #0c5460;
+        }
     </style>
 </head>
 <body>
@@ -473,6 +508,16 @@
         <div class="header">
             <h1>🔍 YOLO+OCR Pipeline</h1>
             <p>Real-time Object Detection & Text Recognition</p>
+        </div>
+
+        <!-- Safari compatibility notice -->
+        <div id="safariNotice" class="safari-notice" style="display: none;">
+            <strong>Safari Users:</strong> 
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Click "Allow" when prompted for camera access</li>
+                <li>File uploads require clicking the "Choose File" button</li>
+                <li>Ensure you're using HTTPS for webcam features</li>
+            </ul>
         </div>
 
         <div class="main-grid">
@@ -491,28 +536,33 @@
                     </div>
                 </div>
 
+                <!-- Webcam permission notice -->
+                <div id="webcamPermissionNotice" class="webcam-permission-notice">
+                    <strong>Camera Permission Required:</strong><br>
+                    Please allow camera access when prompted by your browser. In Safari, you may need to check Safari > Preferences > Websites > Camera.
+                </div>
+
                 <!-- Controls -->
                 <div class="controls">
                     <div class="file-input-wrapper">
-                        <button class="btn btn-secondary">📁 Upload Image</button>
+                        <button class="btn btn-secondary" onclick="triggerFileUpload()">📁 Choose Image File</button>
                         <input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(this)">
                     </div>
                     
                     <div class="webcam-controls">
-                        <select id="cameraSelect" class="webcam-select">
-                            <option value="0">Camera 0</option>
-                            <option value="1">Camera 1</option>
-                            <option value="2">Camera 2</option>
-                        </select>
-                        <button class="btn btn-success" id="startWebcamBtn" onclick="startWebcam()">📹 Start Webcam</button>
-                        <button class="btn btn-danger" id="stopWebcamBtn" onclick="stopWebcam()" style="display: none;">⏹️ Stop Webcam</button>
+                        <button class="btn btn-success" id="startWebcamBtn" onclick="startWebcam()">📹 Start Camera</button>
+                        <button class="btn btn-danger" id="stopWebcamBtn" onclick="stopWebcam()" style="display: none;">⏹️ Stop Camera</button>
+                        <button class="btn btn-secondary" onclick="capturePhoto()" id="captureBtn" style="display: none;">📸 Capture</button>
                     </div>
                 </div>
+
+                <!-- Webcam Video -->
+                <video id="webcamVideo" class="webcam-video" autoplay muted playsinline></video>
 
                 <!-- Image Display -->
                 <div class="image-container" id="imageContainer">
                     <div class="placeholder-text">
-                        Connect to server and upload an image or start webcam
+                        Connect to server and upload an image or start camera
                     </div>
                 </div>
 
@@ -552,7 +602,7 @@
                 <div id="ocrTab" class="tab-content active">
                     <div class="ocr-results" id="ocrResults">
                         <div style="text-align: center; color: #666; padding: 20px;">
-                            No OCR results yet. Upload an image or start webcam to begin.
+                            No OCR results yet. Upload an image or start camera to begin.
                         </div>
                     </div>
                     <div style="margin-top: 15px;">
@@ -593,10 +643,10 @@
                     </div>
                     
                     <div class="settings-group">
-                        <label>Webcam Frame Rate:</label>
+                        <label>Capture Interval (seconds):</label>
                         <div class="slider-container">
-                            <input type="range" class="slider" id="frameRate" min="1" max="30" step="1" value="10">
-                            <span class="slider-value" id="frameRateValue">10</span>
+                            <input type="range" class="slider" id="captureInterval" min="1" max="10" step="1" value="3">
+                            <span class="slider-value" id="captureIntervalValue">3</span>
                         </div>
                     </div>
                 </div>
@@ -622,15 +672,28 @@
         let isConnected = false;
         let webcamStream = null;
         let isWebcamRunning = false;
-        let frameInterval = null;
+        let captureInterval = null;
         let fpsCounter = 0;
         let fpsStartTime = Date.now();
+        let webcamVideo = null;
+
+        // Safari detection
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             updateConnectionUI(false);
+            detectBrowser();
+            webcamVideo = document.getElementById('webcamVideo');
         });
+
+        function detectBrowser() {
+            if (isSafari) {
+                document.getElementById('safariNotice').style.display = 'block';
+                logMessage('Safari detected - enhanced compatibility mode enabled', 'info');
+            }
+        }
 
         function setupEventListeners() {
             // Slider updates
@@ -642,8 +705,11 @@
                 document.getElementById('ocrConfValue').textContent = parseFloat(this.value).toFixed(2);
             });
 
-            document.getElementById('frameRate').addEventListener('input', function() {
-                document.getElementById('frameRateValue').textContent = this.value;
+            document.getElementById('captureInterval').addEventListener('input', function() {
+                document.getElementById('captureIntervalValue').textContent = this.value;
+                if (isWebcamRunning) {
+                    restartCapture();
+                }
             });
 
             // Enter key for connection
@@ -652,6 +718,18 @@
                     toggleConnection();
                 }
             });
+
+            // File input change handler
+            document.getElementById('imageUpload').addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    uploadImage(this);
+                }
+            });
+        }
+
+        function triggerFileUpload() {
+            const fileInput = document.getElementById('imageUpload');
+            fileInput.click();
         }
 
         function toggleConnection() {
@@ -822,6 +900,13 @@
             const file = input.files[0];
             if (!file) return;
 
+            if (!file.type.startsWith('image/')) {
+                logMessage('Please select a valid image file', 'error');
+                return;
+            }
+
+            logMessage(`Loading image: ${file.name}`, 'info');
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -829,16 +914,39 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
+                    // Resize if too large
+                    let { width, height } = img;
+                    const maxDimension = 1024;
                     
-                    const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                    sendImageToServer(base64, `Upload: ${file.name}`);
+                    if (width > maxDimension || height > maxDimension) {
+                        const scale = maxDimension / Math.max(width, height);
+                        width *= scale;
+                        height *= scale;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    try {
+                        const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                        sendImageToServer(base64, `Upload: ${file.name}`);
+                    } catch (error) {
+                        logMessage('Failed to process image: ' + error.message, 'error');
+                    }
+                };
+                img.onerror = function() {
+                    logMessage('Failed to load image file', 'error');
                 };
                 img.src = e.target.result;
             };
+            reader.onerror = function() {
+                logMessage('Failed to read file', 'error');
+            };
             reader.readAsDataURL(file);
+            
+            // Reset file input
+            input.value = '';
         }
 
         function startWebcam() {
@@ -847,75 +955,133 @@
                 return;
             }
 
-            const cameraIndex = parseInt(document.getElementById('cameraSelect').value);
-            
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    deviceId: cameraIndex ? { exact: cameraIndex } : undefined,
+            // Show permission notice for Safari
+            if (isSafari) {
+                document.getElementById('webcamPermissionNotice').style.display = 'block';
+            }
+
+            const constraints = {
+                video: {
                     width: { ideal: 640 },
-                    height: { ideal: 480 }
-                } 
-            })
-            .then(stream => {
-                webcamStream = stream;
-                isWebcamRunning = true;
-                
-                document.getElementById('startWebcamBtn').style.display = 'none';
-                document.getElementById('stopWebcamBtn').style.display = 'inline-block';
-                
-                startFrameCapture();
-                logMessage('Webcam started', 'success');
-            })
-            .catch(error => {
-                logMessage('Failed to start webcam: ' + error.message, 'error');
-            });
+                    height: { ideal: 480 },
+                    facingMode: 'environment' // Prefer back camera on mobile
+                }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => {
+                    webcamStream = stream;
+                    webcamVideo.srcObject = stream;
+                    webcamVideo.style.display = 'block';
+                    
+                    // Hide permission notice
+                    document.getElementById('webcamPermissionNotice').style.display = 'none';
+                    
+                    // Update UI
+                    document.getElementById('startWebcamBtn').style.display = 'none';
+                    document.getElementById('stopWebcamBtn').style.display = 'inline-block';
+                    document.getElementById('captureBtn').style.display = 'inline-block';
+                    
+                    isWebcamRunning = true;
+                    startAutoCapture();
+                    
+                    logMessage('Camera started successfully', 'success');
+                })
+                .catch(error => {
+                    console.error('Camera access error:', error);
+                    let errorMsg = 'Failed to access camera: ';
+                    
+                    switch(error.name) {
+                        case 'NotAllowedError':
+                            errorMsg += 'Permission denied. Please allow camera access.';
+                            if (isSafari) {
+                                errorMsg += ' Check Safari > Preferences > Websites > Camera.';
+                            }
+                            break;
+                        case 'NotFoundError':
+                            errorMsg += 'No camera found on this device.';
+                            break;
+                        case 'NotReadableError':
+                            errorMsg += 'Camera is being used by another application.';
+                            break;
+                        case 'OverconstrainedError':
+                            errorMsg += 'Camera constraints cannot be satisfied.';
+                            break;
+                        default:
+                            errorMsg += error.message || 'Unknown error occurred.';
+                    }
+                    
+                    logMessage(errorMsg, 'error');
+                    
+                    // Hide permission notice on error
+                    document.getElementById('webcamPermissionNotice').style.display = 'none';
+                });
         }
 
         function stopWebcam() {
             isWebcamRunning = false;
             
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
             if (webcamStream) {
-                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream.getTracks().forEach(track => {
+                    track.stop();
+                });
                 webcamStream = null;
             }
             
-            if (frameInterval) {
-                clearInterval(frameInterval);
-                frameInterval = null;
-            }
+            webcamVideo.style.display = 'none';
+            webcamVideo.srcObject = null;
             
+            // Update UI
             document.getElementById('startWebcamBtn').style.display = 'inline-block';
             document.getElementById('stopWebcamBtn').style.display = 'none';
+            document.getElementById('captureBtn').style.display = 'none';
             
-            logMessage('Webcam stopped');
+            logMessage('Camera stopped', 'info');
         }
 
-        function startFrameCapture() {
-            const frameRate = parseInt(document.getElementById('frameRate').value);
-            const interval = 1000 / frameRate;
+        function startAutoCapture() {
+            if (captureInterval) {
+                clearInterval(captureInterval);
+            }
             
-            frameInterval = setInterval(() => {
-                if (!isWebcamRunning || !webcamStream) return;
-                
-                captureFrame();
+            const interval = parseInt(document.getElementById('captureInterval').value) * 1000;
+            
+            captureInterval = setInterval(() => {
+                if (isWebcamRunning && webcamVideo && !webcamVideo.paused) {
+                    capturePhoto();
+                }
             }, interval);
         }
 
-        function captureFrame() {
-            const video = document.createElement('video');
-            video.srcObject = webcamStream;
-            video.play();
-            
-            video.onloadedmetadata = () => {
+        function restartCapture() {
+            if (isWebcamRunning) {
+                startAutoCapture();
+                logMessage('Capture interval updated', 'info');
+            }
+        }
+
+        function capturePhoto() {
+            if (!webcamVideo || webcamVideo.paused) {
+                logMessage('No video stream available', 'error');
+                return;
+            }
+
+            try {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0);
+                canvas.width = webcamVideo.videoWidth;
+                canvas.height = webcamVideo.videoHeight;
+                
+                ctx.drawImage(webcamVideo, 0, 0);
                 
                 const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-                sendImageToServer(base64, 'Webcam');
+                sendImageToServer(base64, 'Camera');
                 
                 // Calculate FPS
                 fpsCounter++;
@@ -925,7 +1091,10 @@
                     fpsCounter = 0;
                     fpsStartTime = Date.now();
                 }
-            };
+                
+            } catch (error) {
+                logMessage('Failed to capture photo: ' + error.message, 'error');
+            }
         }
 
         function sendImageToServer(base64Data, source) {
@@ -936,7 +1105,7 @@
 
             try {
                 websocket.send(base64Data);
-                logMessage(`Sent image from ${source}`);
+                logMessage(`Sent image from ${source}`, 'info');
             } catch (error) {
                 logMessage('Failed to send image: ' + error.message, 'error');
             }
@@ -945,7 +1114,7 @@
         function switchTab(tabName) {
             // Update tab buttons
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
             
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -974,6 +1143,7 @@
             const a = document.createElement('a');
             a.href = url;
             a.download = `ocr_results_${Date.now()}.txt`;
+            a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -993,21 +1163,43 @@
             });
             
             if (allText) {
-                navigator.clipboard.writeText(allText).then(() => {
-                    logMessage('Text copied to clipboard', 'success');
-                }).catch(() => {
-                    // Fallback for older browsers
-                    const textarea = document.createElement('textarea');
-                    textarea.value = allText;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    logMessage('Text copied to clipboard', 'success');
-                });
+                // Modern clipboard API with fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(allText).then(() => {
+                        logMessage('Text copied to clipboard', 'success');
+                    }).catch(() => {
+                        fallbackCopyTextToClipboard(allText);
+                    });
+                } else {
+                    fallbackCopyTextToClipboard(allText);
+                }
             } else {
                 logMessage('No text to copy', 'error');
             }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-999999px';
+            textarea.style.top = '-999999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    logMessage('Text copied to clipboard', 'success');
+                } else {
+                    logMessage('Failed to copy text', 'error');
+                }
+            } catch (err) {
+                logMessage('Copy not supported', 'error');
+            }
+            
+            document.body.removeChild(textarea);
         }
 
         function clearLogs() {
@@ -1048,48 +1240,61 @@
             }
         }
 
-        // Ping server periodically to keep connection alive
-        setInterval(() => {
-            if (websocket && isConnected) {
-                try {
-                    websocket.send('ping');
-                } catch (error) {
-                    logMessage('Ping failed: ' + error.message, 'error');
-                }
-            }
-        }, 30000); // Ping every 30 seconds
+        // Drag and drop support for images
+        let dragCounter = 0;
 
-        // Handle page visibility changes
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && isWebcamRunning) {
-                // Pause webcam when tab is hidden to save resources
-                logMessage('Tab hidden - webcam paused');
-            } else if (!document.hidden && isWebcamRunning) {
-                logMessage('Tab visible - webcam resumed');
+        document.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            dragCounter++;
+            const container = document.getElementById('imageContainer');
+            container.style.borderColor = '#2a5298';
+            container.style.backgroundColor = 'rgba(42, 82, 152, 0.1)';
+        });
+
+        document.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter === 0) {
+                const container = document.getElementById('imageContainer');
+                container.style.borderColor = '#dee2e6';
+                container.style.backgroundColor = '#f8f9fa';
             }
         });
 
-        // Handle window beforeunload
-        window.addEventListener('beforeunload', () => {
-            if (websocket) {
-                websocket.close();
-            }
-            stopWebcam();
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
         });
 
-        // Touch/mobile support for file upload
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.closest('.file-input-wrapper')) {
-                e.target.closest('.file-input-wrapper').querySelector('input[type=file]').click();
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dragCounter = 0;
+            
+            const container = document.getElementById('imageContainer');
+            container.style.borderColor = '#dee2e6';
+            container.style.backgroundColor = '#f8f9fa';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                const input = document.getElementById('imageUpload');
+                input.files = files;
+                uploadImage(input);
+                logMessage('Image dropped and uploaded', 'success');
+            } else {
+                logMessage('Please drop a valid image file', 'error');
             }
         });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
+            // Only handle shortcuts when not typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
             // Ctrl/Cmd + U for upload
             if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
                 e.preventDefault();
-                document.getElementById('imageUpload').click();
+                triggerFileUpload();
             }
             
             // Ctrl/Cmd + W for webcam toggle
@@ -1103,30 +1308,102 @@
             }
             
             // Space for connect/disconnect
-            if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            if (e.key === ' ') {
                 e.preventDefault();
                 toggleConnection();
             }
+            
+            // C for capture photo
+            if (e.key === 'c' && isWebcamRunning) {
+                e.preventDefault();
+                capturePhoto();
+            }
         });
 
-        // Auto-resize image container based on content
-        function resizeImageContainer() {
-            const container = document.getElementById('imageContainer');
-            const img = container.querySelector('img');
-            
-            if (img) {
-                img.addEventListener('load', function() {
-                    const maxHeight = window.innerHeight * 0.6;
-                    if (this.naturalHeight > maxHeight) {
-                        container.style.maxHeight = maxHeight + 'px';
-                    }
-                });
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isWebcamRunning) {
+                logMessage('Tab hidden - pausing auto capture');
+                if (captureInterval) {
+                    clearInterval(captureInterval);
+                    captureInterval = null;
+                }
+            } else if (!document.hidden && isWebcamRunning) {
+                logMessage('Tab visible - resuming auto capture');
+                startAutoCapture();
             }
+        });
+
+        // Handle window beforeunload
+        window.addEventListener('beforeunload', () => {
+            if (websocket) {
+                websocket.close();
+            }
+            stopWebcam();
+        });
+
+        // Ping server periodically to keep connection alive
+        setInterval(() => {
+            if (websocket && isConnected) {
+                try {
+                    websocket.send('ping');
+                } catch (error) {
+                    logMessage('Ping failed: ' + error.message, 'error');
+                }
+            }
+        }, 30000); // Ping every 30 seconds
+
+        // Safari-specific optimizations
+        if (isSafari) {
+            // Prevent Safari from caching too aggressively
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    location.reload();
+                }
+            });
+            
+            // Handle Safari's stricter autoplay policies
+            document.addEventListener('click', function() {
+                if (webcamVideo && webcamVideo.paused && webcamStream) {
+                    webcamVideo.play().catch(e => {
+                        console.log('Video play failed:', e);
+                    });
+                }
+            }, { once: true });
         }
 
-        // Call resize function when needed
-        const observer = new MutationObserver(resizeImageContainer);
-        observer.observe(document.getElementById('imageContainer'), { childList: true });
+        // Initialize tooltips and help text
+        function initializeTooltips() {
+            const tooltips = {
+                'yoloConfidence': 'Minimum confidence threshold for YOLO detections (0.1 = very sensitive, 1.0 = very strict)',
+                'ocrConfidence': 'Minimum confidence threshold for OCR text recognition',
+                'captureInterval': 'How often to automatically capture and process camera frames',
+                'enableOCR': 'Enable or disable OCR text recognition processing',
+                'showRegions': 'Show extracted text regions in results (useful for debugging)'
+            };
+            
+            Object.entries(tooltips).forEach(([id, text]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.title = text;
+                }
+            });
+        }
+
+        // Enhanced error handling for WebSocket
+        function handleWebSocketError(error) {
+            console.error('WebSocket error:', error);
+            
+            // Attempt to reconnect after a delay
+            if (isConnected) {
+                logMessage('Connection lost. Attempting to reconnect...', 'error');
+                setTimeout(() => {
+                    if (!isConnected) {
+                        connect();
+                    }
+                }, 3000);
+            }
+        }
 
         // Performance monitoring
         let performanceStats = {
@@ -1151,46 +1428,6 @@
             }
         }
 
-        // Enhanced error handling for WebSocket
-        function handleWebSocketError(error) {
-            console.error('WebSocket error:', error);
-            
-            // Attempt to reconnect after a delay
-            if (isConnected) {
-                logMessage('Connection lost. Attempting to reconnect...', 'error');
-                setTimeout(() => {
-                    if (!isConnected) {
-                        connect();
-                    }
-                }, 3000);
-            }
-        }
-
-        // Add service worker for offline support (optional)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
-                console.log('Service worker registration failed:', err);
-            });
-        }
-
-        // Initialize tooltips and help text
-        function initializeTooltips() {
-            const tooltips = {
-                'yoloConfidence': 'Minimum confidence threshold for YOLO detections (0.1 = very sensitive, 1.0 = very strict)',
-                'ocrConfidence': 'Minimum confidence threshold for OCR text recognition',
-                'frameRate': 'Webcam processing frame rate (higher = more responsive but uses more resources)',
-                'enableOCR': 'Enable or disable OCR text recognition processing',
-                'showRegions': 'Show extracted text regions in results (useful for debugging)'
-            };
-            
-            Object.entries(tooltips).forEach(([id, text]) => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.title = text;
-                }
-            });
-        }
-
         // Call initialization functions
         document.addEventListener('DOMContentLoaded', function() {
             initializeTooltips();
@@ -1200,42 +1437,35 @@
                 if (!isConnected) {
                     logMessage('💡 Tip: Make sure your YOLO+OCR server is running on the specified URL');
                     logMessage('💡 Default server URL is ws://localhost:8000/ws');
-                    logMessage('💡 Use Ctrl+U to upload images, Ctrl+W for webcam, Space to connect');
+                    logMessage('💡 Use Ctrl+U to upload images, Ctrl+W for camera, Space to connect');
+                    if (isSafari) {
+                        logMessage('💡 Safari users: Allow camera permissions when prompted');
+                    }
                 }
             }, 2000);
         });
 
-        // Add drag and drop support for images
-        document.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('imageContainer').style.borderColor = '#2a5298';
-            document.getElementById('imageContainer').style.backgroundColor = 'rgba(42, 82, 152, 0.1)';
-        });
+        // Mobile/touch optimizations
+        if ('ontouchstart' in window) {
+            // Add touch-friendly interactions
+            document.addEventListener('touchstart', function() {
+                // Enable video playback on touch devices
+                if (webcamVideo && webcamVideo.paused && webcamStream) {
+                    webcamVideo.play().catch(console.log);
+                }
+            }, { once: true });
+        }
 
-        document.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('imageContainer').style.borderColor = '#dee2e6';
-            document.getElementById('imageContainer').style.backgroundColor = '#f8f9fa';
-        });
-
-        document.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            document.getElementById('imageContainer').style.borderColor = '#dee2e6';
-            document.getElementById('imageContainer').style.backgroundColor = '#f8f9fa';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0 && files[0].type.startsWith('image/')) {
-                const input = document.getElementById('imageUpload');
-                input.files = files;
-                uploadImage(input);
-                logMessage('Image dropped and uploaded', 'success');
-            } else {
-                logMessage('Please drop a valid image file', 'error');
+        // Network status monitoring
+        window.addEventListener('online', function() {
+            logMessage('Network connection restored', 'success');
+            if (!isConnected && websocket === null) {
+                setTimeout(() => connect(), 1000);
             }
+        });
+
+        window.addEventListener('offline', function() {
+            logMessage('Network connection lost', 'error');
         });
     </script>
 </body>
