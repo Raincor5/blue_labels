@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Client - Processing Steps Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .step-image { max-width: 200px; max-height: 150px; margin: 10px; border: 1px solid #ddd; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Client - Processing Steps Test</h1>
+    
+    <div class="debug-section">
+        <h3>Connection Status</h3>
+        <div id="connection-status">Connecting...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Received Data</h3>
+        <div id="received-data">No data received yet</div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Processing Steps Analysis</h3>
+        <div id="processing-analysis">Waiting for data...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Step Images</h3>
+        <div id="step-images">No images yet</div>
+    </div>
+
+    <script>
+        let ws = null;
+        let receivedMessages = [];
+        
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            console.log('🔗 Connecting to:', wsUrl);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                console.log('✅ WebSocket connected');
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="success">✅ Connected to server</span>';
+            };
+            
+            ws.onmessage = function(event) {
+                console.log('📨 Received message:', event.data);
+                receivedMessages.push(event.data);
+                
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📊 Parsed data:', data);
+                    
+                    updateReceivedData(data);
+                    analyzeProcessingSteps(data);
+                    displayStepImages(data);
+                    
+                } catch (e) {
+                    console.error('❌ Error parsing message:', e);
+                    document.getElementById('received-data').innerHTML = 
+                        `<span class="error">Error parsing message: ${e.message}</span>`;
+                }
+            };
+            
+            ws.onerror = function(error) {
+                console.error('❌ WebSocket error:', error);
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="error">❌ WebSocket error</span>';
+            };
+            
+            ws.onclose = function() {
+                console.log('🔌 WebSocket closed');
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="error">❌ WebSocket disconnected</span>';
+            };
+        }
+        
+        function updateReceivedData(data) {
+            const dataDiv = document.getElementById('received-data');
+            dataDiv.innerHTML = `
+                <div class="info">
+                    <strong>Message Type:</strong> ${data.type || 'unknown'}<br>
+                    <strong>YOLO Detections:</strong> ${data.yolo_detections?.length || 0}<br>
+                    <strong>OCR Results:</strong> ${Object.keys(data.ocr_results || {}).length}<br>
+                    <strong>Processing Steps:</strong> ${Object.keys(data.processing_steps || {}).length}<br>
+                    <strong>Has Annotated Image:</strong> ${!!data.annotated_image}<br>
+                    <strong>Debug Mode:</strong> ${data.settings?.debug_mode || 'unknown'}
+                </div>
+                <details>
+                    <summary>Raw Data (click to expand)</summary>
+                    <pre style="background: #f5f5f5; padding: 10px; overflow: auto; max-height: 300px;">${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            `;
+        }
+        
+        function analyzeProcessingSteps(data) {
+            const analysisDiv = document.getElementById('processing-analysis');
+            const processingSteps = data.processing_steps || {};
+            
+            if (Object.keys(processingSteps).length === 0) {
+                analysisDiv.innerHTML = '<span class="error">❌ No processing steps found</span>';
+                return;
+            }
+            
+            let analysis = '<div class="success">✅ Processing steps found!</div><br>';
+            
+            Object.entries(processingSteps).forEach(([detectionIdx, stepInfo]) => {
+                analysis += `<div><strong>Detection ${detectionIdx}:</strong><br>`;
+                
+                // Check step_images
+                if (stepInfo.step_images) {
+                    const stepImageKeys = Object.keys(stepInfo.step_images);
+                    analysis += `<span class="success">✅ Step images: ${stepImageKeys.length} images</span><br>`;
+                    analysis += `<small>Keys: ${stepImageKeys.slice(0, 5).join(', ')}${stepImageKeys.length > 5 ? '...' : ''}</small><br>`;
+                } else {
+                    analysis += `<span class="error">❌ No step_images found</span><br>`;
+                }
+                
+                // Check step arrays
+                const perspectiveSteps = stepInfo.perspective_steps?.length || 0;
+                const enhancementSteps = stepInfo.enhancement_steps?.length || 0;
+                const rotationSteps = stepInfo.rotation_steps?.length || 0;
+                
+                analysis += `<small>Perspective steps: ${perspectiveSteps}, Enhancement steps: ${enhancementSteps}, Rotation steps: ${rotationSteps}</small><br>`;
+                
+                analysis += '</div><br>';
+            });
+            
+            analysisDiv.innerHTML = analysis;
+        }
+        
+        function displayStepImages(data) {
+            const imagesDiv = document.getElementById('step-images');
+            const processingSteps = data.processing_steps || {};
+            
+            if (Object.keys(processingSteps).length === 0) {
+                imagesDiv.innerHTML = '<span class="error">❌ No processing steps to display</span>';
+                return;
+            }
+            
+            let imagesHtml = '';
+            
+            Object.entries(processingSteps).forEach(([detectionIdx, stepInfo]) => {
+                if (stepInfo.step_images) {
+                    imagesHtml += `<h4>Detection ${detectionIdx} Images:</h4>`;
+                    
+                    Object.entries(stepInfo.step_images).forEach(([key, imgData]) => {
+                        imagesHtml += `
+                            <div style="display: inline-block; margin: 10px; text-align: center;">
+                                <img src="data:image/jpeg;base64,${imgData}" class="step-image" alt="${key}">
+                                <br><small>${key}</small>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            if (imagesHtml) {
+                imagesDiv.innerHTML = imagesHtml;
+            } else {
+                imagesDiv.innerHTML = '<span class="error">❌ No step images found</span>';
+            }
+        }
+        
+        // Connect when page loads
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html> 

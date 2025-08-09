@@ -4,6 +4,8 @@ import uvicorn
 import logging
 import os
 from pathlib import Path
+import shutil
+import subprocess
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
@@ -11,13 +13,19 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 import datetime
 import ipaddress
 
-# Import the enhanced pipeline
+# Import the enhanced pipeline (robust with helpful errors)
 try:
-    from enhanced_yolo_ocr_pipeline import app, get_pipeline, EnhancedYOLOOCRPipeline
-except ImportError:
-    print("Error: enhanced_yolo_ocr_pipeline.py not found!")
-    print("Please ensure the enhanced pipeline file is in the same directory.")
-    exit(1)
+    from enhanced_yolo_ocr_pipeline import app, get_pipeline, EnhancedYOLOOCRPipeline, set_pipeline_setting
+except Exception as e_primary:
+    # Fallback to alternate module name if present
+    try:
+        from enhanced_yolo_ocr_pipeline_v2 import app, get_pipeline, EnhancedYOLOOCRPipeline, set_pipeline_setting  # type: ignore
+    except Exception as e_fallback:
+        print("Error importing enhanced pipeline module.")
+        print(f"Primary import error: {e_primary}")
+        print(f"Fallback import error: {e_fallback}")
+        print("Hint: ensure the file exists and install dependencies: 'pip install -r requirements.txt'")
+        exit(1)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +37,7 @@ class SSLCertificateManager:
         self.cert_dir.mkdir(exist_ok=True)
         self.cert_file = self.cert_dir / "server.crt"
         self.key_file = self.cert_dir / "server.key"
+        self.ca_installed_marker = self.cert_dir / ".mkcert_ca_installed"
     
     def generate_self_signed_cert(self, hostname: str = "localhost", 
                                 ip_addresses: list = None, 
@@ -146,6 +155,33 @@ class SSLCertificateManager:
     def cert_exists(self) -> bool:
         """Check if certificate files exist"""
         return self.cert_file.exists() and self.key_file.exists()
+
+    def mkcert_available(self) -> bool:
+        """Check if mkcert is available on PATH"""
+        return bool(shutil.which("mkcert") or shutil.which("mkcert.exe"))
+
+    def generate_mkcert_cert(self, names: list[str]) -> tuple[str, str]:
+        """Generate trusted cert using mkcert for given names (DNS & IP)."""
+        if not self.mkcert_available():
+            raise RuntimeError("mkcert not found in PATH")
+        try:
+            # Ensure local CA is installed (idempotent)
+            try:
+                subprocess.run(["mkcert", "-install"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except Exception:
+                pass
+            # Generate cert
+            cmd = ["mkcert", "-cert-file", str(self.cert_file), "-key-file", str(self.key_file)] + names
+            result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logging.getLogger(__name__).info("mkcert output: %s", result.stdout.decode(errors="ignore").strip())
+            # Mark CA installed once
+            try:
+                self.ca_installed_marker.write_text("ok", encoding="utf-8")
+            except Exception:
+                pass
+            return str(self.cert_file), str(self.key_file)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"mkcert failed: {e.stderr.decode(errors='ignore')}")
     
     def cert_is_valid(self, days_ahead: int = 30) -> bool:
         """Check if certificate is valid for at least the specified days"""
@@ -254,17 +290,17 @@ def main():
     parser.add_argument("--regenerate-cert", action="store_true", help="Force regenerate SSL certificate")
     parser.add_argument("--cert-days", type=int, default=365, help="Certificate validity in days")
     parser.add_argument("--no-ssl", action="store_true", help="Disable SSL (HTTP only)")
+    parser.add_argument("--use-mkcert", action="store_true", help="Use mkcert to generate trusted local certificates")
     
     args = parser.parse_args()
     
-    # Initialize pipeline
-    global pipeline
-    pipeline = EnhancedYOLOOCRPipeline(args.yolo_model, args.ocr_languages)
+    # Apply command line settings using the new persistent settings function
+    set_pipeline_setting('debug_mode', args.debug)
+    set_pipeline_setting('enable_preprocessing', not args.no_preprocessing)
+    set_pipeline_setting('enable_rotation_correction', not args.no_rotation_correction)
     
-    # Apply command line settings
-    pipeline.debug_mode = args.debug
-    pipeline.enable_preprocessing = not args.no_preprocessing
-    pipeline.enable_rotation_correction = not args.no_rotation_correction
+    # Initialize pipeline with settings
+    pipeline = get_pipeline()
     
     logger.info(f"Initializing Enhanced YOLO+OCR Pipeline Server")
     logger.info(f"YOLO Model: {args.yolo_model}")
@@ -295,18 +331,35 @@ def main():
         key_file = args.key_file
         logger.info(f"Using provided SSL certificates: {cert_file}, {key_file}")
     else:
-        # Use auto-generated certificates
-        if args.regenerate_cert or not cert_manager.cert_exists() or not cert_manager.cert_is_valid():
-            logger.info("Generating new SSL certificate...")
-            cert_file, key_file = cert_manager.generate_self_signed_cert(
-                hostname=hostname,
-                ip_addresses=[get_local_ip(), "127.0.0.1", "::1"],
-                days_valid=args.cert_days
-            )
-        else:
-            cert_file = str(cert_manager.cert_file)
-            key_file = str(cert_manager.key_file)
-            logger.info("Using existing SSL certificate")
+        # Use mkcert if requested and available, else fallback to self-signed
+        need_new = args.regenerate_cert or not cert_manager.cert_exists() or not cert_manager.cert_is_valid()
+        if args.use_mkcert:
+            try:
+                if need_new:
+                    logger.info("Generating mkcert certificate...")
+                    # Names: hostname, localhost, and common IPs
+                    names = [hostname, "localhost", get_local_ip(), "127.0.0.1"]
+                    cert_file, key_file = cert_manager.generate_mkcert_cert(names)
+                else:
+                    cert_file = str(cert_manager.cert_file)
+                    key_file = str(cert_manager.key_file)
+                    logger.info("Using existing certificate (mkcert mode)")
+            except Exception as e:
+                logger.warning(f"mkcert generation failed: {e}. Falling back to self-signed.")
+                need_new = True
+                args.use_mkcert = False
+        if not args.use_mkcert:
+            if need_new:
+                logger.info("Generating new self-signed SSL certificate...")
+                cert_file, key_file = cert_manager.generate_self_signed_cert(
+                    hostname=hostname,
+                    ip_addresses=[get_local_ip(), "127.0.0.1", "::1"],
+                    days_valid=args.cert_days
+                )
+            else:
+                cert_file = str(cert_manager.cert_file)
+                key_file = str(cert_manager.key_file)
+                logger.info("Using existing SSL certificate")
     
     # Display certificate info
     cert_info = cert_manager.get_cert_info()

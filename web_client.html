@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YOLO+OCR Pipeline Web Client</title>
+    <title>Enhanced YOLO+OCR Pipeline v2.0</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -34,6 +34,14 @@
             font-size: 2.5rem;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .version {
+            font-size: 1.2rem;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
         }
 
         .header p {
@@ -234,7 +242,7 @@
             opacity: 0.9;
         }
 
-        /* Results Panel */
+        /* Enhanced Results Panel */
         .results-tabs {
             display: flex;
             margin-bottom: 20px;
@@ -251,6 +259,7 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
 
         .tab-btn.active {
@@ -266,6 +275,177 @@
             display: block;
         }
 
+        /* Processing Steps Visualization */
+        .processing-steps {
+            margin-bottom: 20px;
+        }
+
+        .detection-processing {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .detection-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .detection-steps {
+            padding: 15px;
+            background: #fafafa;
+            display: none;
+        }
+
+        .detection-steps.expanded {
+            display: block;
+        }
+
+        .step-category {
+            margin-bottom: 20px;
+        }
+
+        .step-category-title {
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .step-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .step-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .step-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .step-info {
+            padding: 10px;
+        }
+
+        .step-name {
+            font-weight: bold;
+            color: #2a5298;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .step-description {
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.3;
+        }
+
+        .step-params {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 5px;
+            font-family: monospace;
+        }
+
+        .timing-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .timing-item {
+            text-align: center;
+        }
+
+        .timing-value {
+            font-weight: bold;
+            color: #2a5298;
+        }
+
+        .timing-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* Image Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: #ffffff;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            opacity: 0.7;
+        }
+
+        .modal-info {
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* OCR Results */
         .ocr-results {
             max-height: 400px;
             overflow-y: auto;
@@ -282,7 +462,7 @@
             border-left: 4px solid #2a5298;
         }
 
-        .detection-header {
+        .detection-header-ocr {
             font-weight: bold;
             color: #2a5298;
             margin-bottom: 10px;
@@ -303,6 +483,7 @@
             float: right;
         }
 
+        /* Logs */
         .logs {
             max-height: 300px;
             overflow-y: auto;
@@ -396,7 +577,6 @@
             border-radius: 5px;
         }
 
-        /* Webcam Video */
         .webcam-video {
             width: 100%;
             max-width: 640px;
@@ -406,14 +586,82 @@
             display: none;
         }
 
+        /* New Feature Badges */
+        .new-feature {
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        /* Step Count Badge */
+        .step-count {
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        /* Processing Pipeline Grid */
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Debug Info */
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .debug-toggle {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .debug-content {
+            display: none;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .debug-content.expanded {
+            display: block;
+        }
+
         /* Responsive Design */
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
             }
             
-            .metrics {
-                grid-template-columns: repeat(2, 1fr);
+            .step-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
         }
 
@@ -444,23 +692,12 @@
             }
             
             .metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .step-grid {
                 grid-template-columns: 1fr;
             }
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
 
         /* Animations */
@@ -483,7 +720,21 @@
             100% { transform: scale(1); }
         }
 
-        /* Safari-specific fixes */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Safari-specific styles */
         .webcam-permission-notice {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -506,8 +757,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔍 YOLO+OCR Pipeline</h1>
-            <p>Real-time Object Detection & Text Recognition</p>
+            <h1>🔍 Enhanced YOLO+OCR Pipeline</h1>
+            <div class="version">Version 2.0 - Linear Transformations & Step Visualization</div>
+            <p>Real-time Object Detection & Text Recognition with Advanced Preprocessing</p>
         </div>
 
         <!-- Safari compatibility notice -->
@@ -523,7 +775,7 @@
         <div class="main-grid">
             <!-- Main Display Area -->
             <div class="card">
-                <h2>📸 Live Detection View</h2>
+                <h2>📸 Live Detection View <span class="new-feature">Enhanced v2.0</span></h2>
                 
                 <!-- Connection Status -->
                 <div class="connection-panel">
@@ -584,22 +836,36 @@
                         <div class="metric-value" id="totalTime">0</div>
                         <div class="metric-label">Total (ms)</div>
                     </div>
+                    <div class="metric">
+                        <div class="metric-value" id="preprocessTime">0</div>
+                        <div class="metric-label">Preprocess (ms)</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Results Panel -->
+            <!-- Enhanced Results Panel -->
             <div class="card">
-                <h2>📊 Results & Controls</h2>
+                <h2>📊 Results & Processing Steps <span class="new-feature">New!</span></h2>
                 
-                <!-- Tabs -->
+                <!-- Enhanced Tabs -->
                 <div class="results-tabs">
-                    <button class="tab-btn active" onclick="switchTab('ocr')">📝 OCR Results</button>
+                    <button class="tab-btn active" onclick="switchTab('steps')">🔬 Processing Steps</button>
+                    <button class="tab-btn" onclick="switchTab('ocr')">📝 OCR Results</button>
                     <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
                     <button class="tab-btn" onclick="switchTab('logs')">📋 Logs</button>
                 </div>
 
+                <!-- Processing Steps Tab -->
+                <div id="stepsTab" class="tab-content active">
+                    <div class="processing-steps" id="processingsteps">
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            No processing steps yet. Upload an image or start camera to see the enhanced preprocessing pipeline visualization.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- OCR Results Tab -->
-                <div id="ocrTab" class="tab-content active">
+                <div id="ocrTab" class="tab-content">
                     <div class="ocr-results" id="ocrResults">
                         <div style="text-align: center; color: #666; padding: 20px;">
                             No OCR results yet. Upload an image or start camera to begin.
@@ -638,7 +904,47 @@
                     
                     <div class="settings-group">
                         <label>
-                            <input type="checkbox" id="showRegions"> Show Extracted Regions
+                            <input type="checkbox" id="enablePreprocessing" checked> Enable Enhanced Preprocessing
+                        </label>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="enableRotationCorrection" checked> Enable Rotation Correction
+                        </label>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="enableDebugMode"> Enable Debug Mode (Step Visualization)
+                        </label>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>OCR Engine Mode:</label>
+                        <select id="ocrEngineMode" style="padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                            <option value="ensemble">Ensemble (EasyOCR + Tesseract + TrOCR)</option>
+                            <option value="prefer_trocr">Prefer TrOCR (plus others)</option>
+                            <option value="trocr">TrOCR only</option>
+                            <option value="easyocr">EasyOCR only</option>
+                            <option value="tesseract">Tesseract only</option>
+                        </select>
+                    </div>
+
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="enableMultiscaleOcr" checked> Enable Multi-Scale OCR
+                        </label>
+                    </div>
+
+                    <div class="settings-group">
+                        <label>OCR Scales (comma-separated):</label>
+                        <input id="ocrScales" type="text" value="0.5,1.0,1.5,2.0" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px;" />
+                    </div>
+
+                    <div class="settings-group">
+                        <label>
+                            <input type="checkbox" id="enableSuperres"> Enable Super-Resolution (if available)
                         </label>
                     </div>
                     
@@ -649,19 +955,68 @@
                             <span class="slider-value" id="captureIntervalValue">3</span>
                         </div>
                     </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="updateServerSettings()">💾 Update Server Settings</button>
+                        <button class="btn btn-secondary" style="margin-left: 10px;" onclick="loadServerSettings()">🔄 Load Server Settings</button>
+                    </div>
                 </div>
 
                 <!-- Logs Tab -->
                 <div id="logsTab" class="tab-content">
                     <div class="logs" id="logsContainer">
                         <div class="log-entry">
-                            <span class="log-timestamp">[System]</span> Web client initialized
+                            <span class="log-timestamp">[System]</span> Enhanced web client v2.0 initialized
                         </div>
                     </div>
                     <div style="margin-top: 15px;">
                         <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Clear Logs</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Processing Pipeline Overview -->
+        <div class="card pipeline-grid">
+            <h2>🔄 Enhanced Processing Pipeline Overview</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="metric" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="metric-label">Stage 1: YOLO Detection</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">Oriented Bounding Boxes</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="metric-label">Stage 2: Perspective Correction</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">Linear Transformations</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="metric-label">Stage 3: Boundary Refinement</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">Edge Detection & Contours</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                    <div class="metric-label">Stage 4: Image Enhancement</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">CLAHE & Filtering</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);">
+                    <div class="metric-label">Stage 5: Rotation Correction</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">Hough Line Transform</div>
+                </div>
+                <div class="metric" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);">
+                    <div class="metric-label">Stage 6: Multi-Engine OCR</div>
+                    <div style="font-size: 0.9rem; margin-top: 5px;">EasyOCR + Tesseract</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" class="modal-image" src="" alt="">
+            <div id="modalInfo" class="modal-info">
+                <div id="modalTitle" style="font-weight: bold; margin-bottom: 5px;"></div>
+                <div id="modalDescription" style="margin-bottom: 10px;"></div>
+                <div id="modalParams" style="font-size: 0.9rem; color: #666;"></div>
             </div>
         </div>
     </div>
@@ -676,6 +1031,7 @@
         let fpsCounter = 0;
         let fpsStartTime = Date.now();
         let webcamVideo = null;
+        let currentProcessingSteps = {};
 
         // Safari detection
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -686,6 +1042,7 @@
             updateConnectionUI(false);
             detectBrowser();
             webcamVideo = document.getElementById('webcamVideo');
+            logMessage('🚀 Enhanced YOLO+OCR Pipeline v2.0 client loaded with step visualization support');
         });
 
         function detectBrowser() {
@@ -725,6 +1082,13 @@
                     uploadImage(this);
                 }
             });
+
+            // Modal close on ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
         }
 
         function triggerFileUpload() {
@@ -749,7 +1113,9 @@
                 websocket.onopen = function() {
                     isConnected = true;
                     updateConnectionUI(true);
-                    logMessage('Connected to server', 'success');
+                    logMessage('Connected to Enhanced YOLO+OCR Pipeline Server v2.0', 'success');
+                    // Load server settings on connect
+                    loadServerSettings();
                 };
 
                 websocket.onmessage = function(event) {
@@ -808,12 +1174,18 @@
                         break;
                     case 'info':
                         logMessage('Server: ' + message.message);
+                        if (message.features) {
+                            logMessage('✨ Server features: ' + Object.keys(message.features).join(', '), 'info');
+                        }
                         break;
                     case 'error':
                         logMessage('Server error: ' + message.message, 'error');
                         break;
                     case 'pong':
-                        logMessage('Server pong received');
+                        logMessage('Server pong received - pipeline v' + (message.server_info?.version || '2.0'));
+                        if (message.server_info) {
+                            logMessage('🔧 Pipeline features: ' + Object.entries(message.server_info).filter(([k,v]) => v === true).map(([k]) => k).join(', '));
+                        }
                         break;
                     default:
                         logMessage('Unknown message type: ' + message.type);
@@ -826,7 +1198,7 @@
         function handlePipelineResult(result) {
             // Update performance metrics
             const timing = result.timing || {};
-            updateMetrics(0, timing.yolo_ms || 0, timing.ocr_ms || 0, timing.total_ms || 0);
+            updateMetrics(0, timing.yolo_ms || 0, timing.ocr_ms || 0, timing.total_ms || 0, timing.preprocessing_ms || 0);
 
             // Display annotated image
             if (result.annotated_image) {
@@ -836,14 +1208,355 @@
             // Update OCR results
             updateOCRResults(result.yolo_detections || [], result.ocr_results || {});
 
-            logMessage(`Processed: ${result.yolo_detections?.length || 0} detections, ${Object.keys(result.ocr_results || {}).length} OCR results`);
+            // Update processing steps visualization
+            updateProcessingSteps(result.processing_steps || {}, result.yolo_detections || []);
+
+            const detectionCount = result.yolo_detections?.length || 0;
+            const ocrCount = Object.keys(result.ocr_results || {}).length;
+            const processingEnabled = result.settings?.preprocessing_enabled ? 'ON' : 'OFF';
+            const rotationEnabled = result.settings?.rotation_correction_enabled ? 'ON' : 'OFF';
+            
+            logMessage(`✅ Processed: ${detectionCount} detections, ${ocrCount} OCR results | Preprocessing: ${processingEnabled}, Rotation: ${rotationEnabled}`);
         }
 
-        function updateMetrics(fps, yoloMs, ocrMs, totalMs) {
+        function updateMetrics(fps, yoloMs, ocrMs, totalMs, preprocessMs) {
             if (fps > 0) document.getElementById('fpsValue').textContent = fps.toFixed(1);
             if (yoloMs > 0) document.getElementById('yoloTime').textContent = Math.round(yoloMs);
             if (ocrMs > 0) document.getElementById('ocrTime').textContent = Math.round(ocrMs);
             if (totalMs > 0) document.getElementById('totalTime').textContent = Math.round(totalMs);
+            if (preprocessMs > 0) document.getElementById('preprocessTime').textContent = Math.round(preprocessMs);
+        }
+
+        function updateProcessingSteps(processingSteps, detections) {
+            const container = document.getElementById('processingsteps');
+            currentProcessingSteps = processingSteps;
+            
+            // Debug logging
+            console.log('🔍 updateProcessingSteps called with:', {
+                processingSteps: processingSteps,
+                detections: detections,
+                processingStepsKeys: processingSteps ? Object.keys(processingSteps) : [],
+                hasStepImages: processingSteps && Object.keys(processingSteps).some(key => 
+                    processingSteps[key] && processingSteps[key].step_images
+                )
+            });
+            
+            if (!processingSteps || Object.keys(processingSteps).length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No processing steps available. Enable debug mode in settings for detailed visualization.</div>';
+                return;
+            }
+
+            let html = '';
+            
+            Object.entries(processingSteps).forEach(([detectionIdx, stepInfo]) => {
+                const detection = detections[parseInt(detectionIdx)] || {};
+                const stepCount = (stepInfo.perspective_steps?.length || 0) + 
+                                (stepInfo.enhancement_steps?.length || 0) + 
+                                (stepInfo.rotation_steps?.length || 0);
+                
+                html += `
+                    <div class="detection-processing fade-in">
+                        <div class="detection-header" onclick="toggleDetectionSteps(${detectionIdx})">
+                            <span>🎯 Detection ${parseInt(detectionIdx) + 1}: ${detection.class_name || 'Unknown'}</span>
+                            <div>
+                                <span class="step-count">${stepCount}</span>
+                                <span style="margin-left: 10px;">▼</span>
+                            </div>
+                        </div>
+                        <div id="detection-steps-${detectionIdx}" class="detection-steps">
+                `;
+
+                // Add timing information
+                if (stepInfo.timing) {
+                    html += `
+                        <div class="timing-info">
+                            <div class="timing-item">
+                                <div class="timing-value">${(stepInfo.timing.perspective_correction * 1000 || 0).toFixed(1)}ms</div>
+                                <div class="timing-label">Perspective</div>
+                            </div>
+                            <div class="timing-item">
+                                <div class="timing-value">${(stepInfo.timing.enhancement * 1000 || 0).toFixed(1)}ms</div>
+                                <div class="timing-label">Enhancement</div>
+                            </div>
+                            <div class="timing-item">
+                                <div class="timing-value">${(stepInfo.timing.rotation_correction * 1000 || 0).toFixed(1)}ms</div>
+                                <div class="timing-label">Rotation</div>
+                            </div>
+                            <div class="timing-item">
+                                <div class="timing-value">${(stepInfo.timing.ocr * 1000 || 0).toFixed(1)}ms</div>
+                                <div class="timing-label">OCR</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Add perspective correction steps
+                if (stepInfo.perspective_steps && stepInfo.perspective_steps.length > 0) {
+                    html += `
+                        <div class="step-category">
+                            <div class="step-category-title">🔄 Perspective Correction & Linear Transformations</div>
+                            <div class="step-grid">
+                    `;
+                    stepInfo.perspective_steps.forEach((step, stepIdx) => {
+                        html += createStepHTML(step, `perspective_${detectionIdx}_${stepIdx}`, stepInfo.step_images);
+                    });
+                    html += '</div></div>';
+                }
+
+                // Add enhancement steps
+                if (stepInfo.enhancement_steps && stepInfo.enhancement_steps.length > 0) {
+                    html += `
+                        <div class="step-category">
+                            <div class="step-category-title">✨ Image Enhancement & Preprocessing</div>
+                            <div class="step-grid">
+                    `;
+                    stepInfo.enhancement_steps.forEach((step, stepIdx) => {
+                        html += createStepHTML(step, `enhancement_${detectionIdx}_${stepIdx}`, stepInfo.step_images);
+                    });
+                    html += '</div></div>';
+                }
+
+                // Add rotation correction steps
+                if (stepInfo.rotation_steps && stepInfo.rotation_steps.length > 0) {
+                    html += `
+                        <div class="step-category">
+                            <div class="step-category-title">🔄 Rotation Correction & Hough Lines</div>
+                            <div class="step-grid">
+                    `;
+                    stepInfo.rotation_steps.forEach((step, stepIdx) => {
+                        html += createStepHTML(step, `rotation_${detectionIdx}_${stepIdx}`, stepInfo.step_images);
+                    });
+                    html += '</div></div>';
+                }
+
+                // Add debug information if available
+                if (stepInfo.error) {
+                    html += `
+                        <div class="debug-info">
+                            <strong style="color: #dc3545;">Processing Error:</strong>
+                            <div style="color: #dc3545; margin-top: 5px;">${stepInfo.error}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="debug-info">
+                            <button class="debug-toggle" onclick="toggleDebugInfo(${detectionIdx})">
+                                🔍 Show Technical Details
+                            </button>
+                            <div id="debug-content-${detectionIdx}" class="debug-content">
+${JSON.stringify(stepInfo, null, 2)}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += '</div></div>';
+            });
+
+            if (html === '') {
+                html = '<div style="text-align: center; color: #666; padding: 20px;">Processing steps not available. Enable debug mode for detailed visualization.</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function createStepHTML(step, stepId, stepImages) {
+            // Try to find the image with the correct prefix
+            let imageSrc = null;
+            if (stepImages) {
+                // Try different possible key formats
+                const possibleKeys = [
+                    step.name,  // Direct match
+                    `perspective_${step.name}`,  // Perspective prefix
+                    `enhancement_${step.name}`,  // Enhancement prefix
+                    `rotation_${step.name}`  // Rotation prefix
+                ];
+                
+                // Debug logging
+                console.log('🔍 createStepHTML for step:', step.name, 'with stepImages keys:', Object.keys(stepImages || {}));
+                
+                for (const key of possibleKeys) {
+                    if (stepImages[key]) {
+                        imageSrc = `data:image/jpeg;base64,${stepImages[key]}`;
+                        console.log('✅ Found image for key:', key);
+                        break;
+                    }
+                }
+                
+                if (!imageSrc) {
+                    console.log('❌ No image found for step:', step.name, 'tried keys:', possibleKeys);
+                }
+            }
+            
+            let paramsText = '';
+            if (step.params && Object.keys(step.params).length > 0) {
+                const importantParams = Object.entries(step.params)
+                    .filter(([key, value]) => !key.includes('matrix') && !Array.isArray(value))
+                    .slice(0, 3)
+                    .map(([key, value]) => `${key}: ${typeof value === 'number' ? value.toFixed(2) : value}`)
+                    .join(', ');
+                if (importantParams) paramsText = importantParams;
+            }
+
+            return `
+                <div class="step-item">
+                    ${imageSrc ? `
+                        <img src="${imageSrc}" 
+                             alt="${step.name}" 
+                             class="step-image"
+                             onclick="openModal('${imageSrc}', '${step.name}', '${step.description}', '${paramsText}')"
+                             title="Click to enlarge">
+                    ` : `
+                        <div class="step-image" style="background: linear-gradient(45deg, #f0f0f0, #e0e0e0); display: flex; align-items: center; justify-content: center; color: #666;">
+                            📊 ${step.name.replace(/_/g, ' ').toUpperCase()}
+                        </div>
+                    `}
+                    <div class="step-info">
+                        <div class="step-name">${step.name.replace(/_/g, ' ').toUpperCase()}</div>
+                        <div class="step-description">${step.description}</div>
+                        ${paramsText ? `<div class="step-params">${paramsText}</div>` : ''}
+                        ${step.image_shape ? `<div class="step-params">Size: ${step.image_shape.join('×')}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleDetectionSteps(detectionIdx) {
+            const stepsElement = document.getElementById(`detection-steps-${detectionIdx}`);
+            if (stepsElement) {
+                stepsElement.classList.toggle('expanded');
+                
+                // Update arrow direction
+                const header = stepsElement.previousElementSibling;
+                const arrow = header.querySelector('span:last-child');
+                if (arrow) {
+                    arrow.textContent = stepsElement.classList.contains('expanded') ? '▲' : '▼';
+                }
+            }
+        }
+
+        function toggleDebugInfo(detectionIdx) {
+            const debugContent = document.getElementById(`debug-content-${detectionIdx}`);
+            if (debugContent) {
+                debugContent.classList.toggle('expanded');
+                const button = debugContent.previousElementSibling;
+                button.textContent = debugContent.classList.contains('expanded') ? 
+                    '🔍 Hide Technical Details' : '🔍 Show Technical Details';
+            }
+        }
+
+        function openModal(imageSrc, title, description, params) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDescription = document.getElementById('modalDescription');
+            const modalParams = document.getElementById('modalParams');
+            
+            modalImage.src = imageSrc;
+            modalTitle.textContent = title.replace(/_/g, ' ').toUpperCase();
+            modalDescription.textContent = description;
+            modalParams.textContent = params;
+            
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        function httpBaseFromWs(url) {
+            try {
+                const u = new URL(url);
+                const scheme = u.protocol === 'wss:' ? 'https:' : 'http:';
+                const base = `${scheme}//${u.host}`;
+                return base;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function loadServerSettings() {
+            const url = document.getElementById('serverUrl').value;
+            const base = httpBaseFromWs(url);
+            if (!base) {
+                logMessage('Invalid server URL for settings fetch', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch(`${base}/settings`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const s = await resp.json();
+                // Populate UI
+                document.getElementById('enableOCR').checked = !!s.ocr_enabled;
+                document.getElementById('enablePreprocessing').checked = !!s.preprocessing_enabled;
+                document.getElementById('enableRotationCorrection').checked = !!s.rotation_correction_enabled;
+                document.getElementById('enableDebugMode').checked = !!s.debug_mode;
+                if (typeof s.min_confidence === 'number') {
+                    document.getElementById('ocrConfidence').value = s.min_confidence;
+                    document.getElementById('ocrConfValue').textContent = Number(s.min_confidence).toFixed(2);
+                }
+                if (typeof s.enable_multiscale_ocr !== 'undefined') {
+                    document.getElementById('enableMultiscaleOcr').checked = !!s.enable_multiscale_ocr;
+                }
+                if (Array.isArray(s.ocr_scales)) {
+                    document.getElementById('ocrScales').value = s.ocr_scales.join(',');
+                }
+                if (typeof s.enable_superres !== 'undefined') {
+                    document.getElementById('enableSuperres').checked = !!s.enable_superres;
+                }
+                if (s.ocr_engine_mode) {
+                    document.getElementById('ocrEngineMode').value = s.ocr_engine_mode;
+                }
+                logMessage('✅ Loaded server settings', 'success');
+            } catch (err) {
+                logMessage('Failed to load server settings: ' + err.message, 'error');
+            }
+        }
+
+        async function updateServerSettings() {
+            if (!isConnected) {
+                logMessage('Not connected to server - cannot update settings', 'error');
+                return;
+            }
+
+            const url = document.getElementById('serverUrl').value;
+            const base = httpBaseFromWs(url);
+            if (!base) {
+                logMessage('Invalid server URL for settings update', 'error');
+                return;
+            }
+
+            // Parse scales
+            const scales = document.getElementById('ocrScales').value
+                .split(',')
+                .map(s => parseFloat(s.trim()))
+                .filter(s => !isNaN(s));
+
+            const settings = {
+                ocr_enabled: document.getElementById('enableOCR').checked,
+                preprocessing_enabled: document.getElementById('enablePreprocessing').checked,
+                rotation_correction_enabled: document.getElementById('enableRotationCorrection').checked,
+                debug_mode: document.getElementById('enableDebugMode').checked,
+                min_confidence: parseFloat(document.getElementById('ocrConfidence').value),
+                enable_multiscale_ocr: document.getElementById('enableMultiscaleOcr').checked,
+                ocr_scales: scales,
+                enable_superres: document.getElementById('enableSuperres').checked,
+                ocr_engine_mode: document.getElementById('ocrEngineMode').value
+            };
+
+            try {
+                const resp = await fetch(`${base}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const updated = await resp.json();
+                logMessage('🔧 Server settings updated: ' + JSON.stringify(updated.settings), 'success');
+            } catch (err) {
+                logMessage('Failed to update server settings: ' + err.message, 'error');
+            }
         }
 
         function updateOCRResults(detections, ocrResults) {
@@ -860,7 +1573,7 @@
                 
                 html += `
                     <div class="detection-item fade-in">
-                        <div class="detection-header">
+                        <div class="detection-header-ocr">
                             Detection ${index + 1}: ${detection.class_name}
                             <span class="confidence">Confidence: ${(detection.confidence * 100).toFixed(1)}%</span>
                         </div>
@@ -868,10 +1581,15 @@
 
                 if (ocrData.length > 0) {
                     ocrData.forEach((ocr, ocrIndex) => {
+                        const engine = ocr.engine || 'unknown';
+                        const engineBadge = engine === 'easyocr' ? '🤖 EasyOCR' : 
+                                          engine === 'tesseract' ? '📝 Tesseract' : 
+                                          engine === 'trocr' ? '🔤 TrOCR' : '❓ Unknown';
+                        
                         html += `
                             <div class="ocr-text">
-                                <strong>Text ${ocrIndex + 1}:</strong> "${ocr.text}"
-                                <span class="confidence">OCR Confidence: ${(ocr.confidence * 100).toFixed(1)}%</span>
+                                <strong>Text ${ocrIndex + 1} (${engineBadge}):</strong> "${ocr.text}"
+                                <span class="confidence">Confidence: ${(ocr.confidence * 100).toFixed(1)}%</span>
                             </div>
                         `;
                     });
@@ -905,7 +1623,7 @@
                 return;
             }
 
-            logMessage(`Loading image: ${file.name}`, 'info');
+            logMessage(`📤 Loading image: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -922,6 +1640,7 @@
                         const scale = maxDimension / Math.max(width, height);
                         width *= scale;
                         height *= scale;
+                        logMessage(`📏 Resized image: ${img.width}×${img.height} → ${Math.round(width)}×${Math.round(height)}`);
                     }
                     
                     canvas.width = width;
@@ -985,7 +1704,7 @@
                     isWebcamRunning = true;
                     startAutoCapture();
                     
-                    logMessage('Camera started successfully', 'success');
+                    logMessage('📹 Camera started successfully - auto capture enabled', 'success');
                 })
                 .catch(error => {
                     console.error('Camera access error:', error);
@@ -1041,7 +1760,7 @@
             document.getElementById('stopWebcamBtn').style.display = 'none';
             document.getElementById('captureBtn').style.display = 'none';
             
-            logMessage('Camera stopped', 'info');
+            logMessage('📹 Camera stopped', 'info');
         }
 
         function startAutoCapture() {
@@ -1061,7 +1780,7 @@
         function restartCapture() {
             if (isWebcamRunning) {
                 startAutoCapture();
-                logMessage('Capture interval updated', 'info');
+                logMessage('🔄 Capture interval updated', 'info');
             }
         }
 
@@ -1087,7 +1806,7 @@
                 fpsCounter++;
                 if (fpsCounter >= 10) {
                     const fps = fpsCounter / ((Date.now() - fpsStartTime) / 1000);
-                    updateMetrics(fps, 0, 0, 0);
+                    updateMetrics(fps, 0, 0, 0, 0);
                     fpsCounter = 0;
                     fpsStartTime = Date.now();
                 }
@@ -1105,7 +1824,7 @@
 
             try {
                 websocket.send(base64Data);
-                logMessage(`Sent image from ${source}`, 'info');
+                logMessage(`🚀 Sent image from ${source}`, 'info');
             } catch (error) {
                 logMessage('Failed to send image: ' + error.message, 'error');
             }
@@ -1130,26 +1849,33 @@
             const results = document.getElementById('ocrResults');
             const textElements = results.querySelectorAll('.ocr-text');
             
-            let exportText = '=== OCR Export ===\n';
-            exportText += `Timestamp: ${new Date().toLocaleString()}\n\n`;
+            let exportText = '=== Enhanced YOLO+OCR Pipeline v2.0 Export ===\n';
+            exportText += `Timestamp: ${new Date().toLocaleString()}\n`;
+            exportText += `Total OCR Results: ${textElements.length}\n\n`;
             
             textElements.forEach((element, index) => {
                 const text = element.textContent.replace(/OCR Confidence:.*/, '').trim();
+                const confidence = element.textContent.match(/Confidence: ([\d.]+)%/);
+                const engine = element.textContent.match(/\((.*?)\)/);
+                
                 exportText += `${index + 1}. ${text}\n`;
+                if (confidence) exportText += `   Confidence: ${confidence[1]}%\n`;
+                if (engine) exportText += `   Engine: ${engine[1]}\n`;
+                exportText += '\n';
             });
             
             const blob = new Blob([exportText], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `ocr_results_${Date.now()}.txt`;
+            a.download = `enhanced_ocr_results_${Date.now()}.txt`;
             a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            logMessage('OCR text exported', 'success');
+            logMessage('📄 OCR text exported with metadata', 'success');
         }
 
         function copyAllText() {
@@ -1158,15 +1884,15 @@
             
             let allText = '';
             textElements.forEach(element => {
-                const text = element.textContent.replace(/Text \d+: "|OCR Confidence:.*/, '').trim();
-                if (text) allText += text + '\n';
+                const text = element.textContent.replace(/Text \d+.*?: "|OCR Confidence:.*/, '').replace(/\(.*?\): "/, '').trim();
+                if (text && text !== '"') allText += text + '\n';
             });
             
             if (allText) {
                 // Modern clipboard API with fallback
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(allText).then(() => {
-                        logMessage('Text copied to clipboard', 'success');
+                        logMessage('📋 Text copied to clipboard', 'success');
                     }).catch(() => {
                         fallbackCopyTextToClipboard(allText);
                     });
@@ -1191,7 +1917,7 @@
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    logMessage('Text copied to clipboard', 'success');
+                    logMessage('📋 Text copied to clipboard', 'success');
                 } else {
                     logMessage('Failed to copy text', 'error');
                 }
@@ -1240,7 +1966,7 @@
             }
         }
 
-        // Drag and drop support for images
+        // Enhanced drag and drop support for images
         let dragCounter = 0;
 
         document.addEventListener('dragenter', function(e) {
@@ -1249,6 +1975,7 @@
             const container = document.getElementById('imageContainer');
             container.style.borderColor = '#2a5298';
             container.style.backgroundColor = 'rgba(42, 82, 152, 0.1)';
+            container.style.transform = 'scale(1.02)';
         });
 
         document.addEventListener('dragleave', function(e) {
@@ -1258,6 +1985,7 @@
                 const container = document.getElementById('imageContainer');
                 container.style.borderColor = '#dee2e6';
                 container.style.backgroundColor = '#f8f9fa';
+                container.style.transform = 'scale(1)';
             }
         });
 
@@ -1272,19 +2000,20 @@
             const container = document.getElementById('imageContainer');
             container.style.borderColor = '#dee2e6';
             container.style.backgroundColor = '#f8f9fa';
+            container.style.transform = 'scale(1)';
             
             const files = e.dataTransfer.files;
             if (files.length > 0 && files[0].type.startsWith('image/')) {
                 const input = document.getElementById('imageUpload');
                 input.files = files;
                 uploadImage(input);
-                logMessage('Image dropped and uploaded', 'success');
+                logMessage('📁 Image dropped and uploaded', 'success');
             } else {
                 logMessage('Please drop a valid image file', 'error');
             }
         });
 
-        // Keyboard shortcuts
+        // Enhanced keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             // Only handle shortcuts when not typing in input fields
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
@@ -1318,18 +2047,30 @@
                 e.preventDefault();
                 capturePhoto();
             }
+
+            // Tab switching shortcuts (1-4)
+            if (e.key >= '1' && e.key <= '4') {
+                e.preventDefault();
+                const tabs = ['steps', 'ocr', 'settings', 'logs'];
+                switchTab(tabs[parseInt(e.key) - 1]);
+            }
+
+            // ESC to close modal
+            if (e.key === 'Escape') {
+                closeModal();
+            }
         });
 
         // Handle page visibility changes
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && isWebcamRunning) {
-                logMessage('Tab hidden - pausing auto capture');
+                logMessage('👁️ Tab hidden - pausing auto capture');
                 if (captureInterval) {
                     clearInterval(captureInterval);
                     captureInterval = null;
                 }
             } else if (!document.hidden && isWebcamRunning) {
-                logMessage('Tab visible - resuming auto capture');
+                logMessage('👁️ Tab visible - resuming auto capture');
                 startAutoCapture();
             }
         });
@@ -1342,7 +2083,7 @@
             stopWebcam();
         });
 
-        // Ping server periodically to keep connection alive
+        // Enhanced ping server with version info
         setInterval(() => {
             if (websocket && isConnected) {
                 try {
@@ -1372,14 +2113,42 @@
             }, { once: true });
         }
 
-        // Initialize tooltips and help text
+        // Enhanced performance monitoring
+        let performanceStats = {
+            totalRequests: 0,
+            avgYoloTime: 0,
+            avgOcrTime: 0,
+            avgTotalTime: 0,
+            avgPreprocessTime: 0,
+            stepVisualizationCount: 0
+        };
+
+        function updatePerformanceStats(yoloMs, ocrMs, totalMs, preprocessMs) {
+            performanceStats.totalRequests++;
+            
+            // Calculate running averages
+            const n = performanceStats.totalRequests;
+            performanceStats.avgYoloTime = ((n - 1) * performanceStats.avgYoloTime + yoloMs) / n;
+            performanceStats.avgOcrTime = ((n - 1) * performanceStats.avgOcrTime + ocrMs) / n;
+            performanceStats.avgTotalTime = ((n - 1) * performanceStats.avgTotalTime + totalMs) / n;
+            performanceStats.avgPreprocessTime = ((n - 1) * performanceStats.avgPreprocessTime + preprocessMs) / n;
+            
+            // Update UI every 10 requests
+            if (n % 10 === 0) {
+                logMessage(`📊 Performance (${n} requests): YOLO: ${performanceStats.avgYoloTime.toFixed(1)}ms, OCR: ${performanceStats.avgOcrTime.toFixed(1)}ms, Preprocess: ${performanceStats.avgPreprocessTime.toFixed(1)}ms`);
+            }
+        }
+
+        // Initialize tooltips with enhanced descriptions
         function initializeTooltips() {
             const tooltips = {
                 'yoloConfidence': 'Minimum confidence threshold for YOLO detections (0.1 = very sensitive, 1.0 = very strict)',
                 'ocrConfidence': 'Minimum confidence threshold for OCR text recognition',
                 'captureInterval': 'How often to automatically capture and process camera frames',
                 'enableOCR': 'Enable or disable OCR text recognition processing',
-                'showRegions': 'Show extracted text regions in results (useful for debugging)'
+                'enablePreprocessing': 'Enable advanced image preprocessing including CLAHE and filtering',
+                'enableRotationCorrection': 'Enable text orientation correction using Hough line transform',
+                'enableDebugMode': 'Enable detailed step-by-step visualization of the processing pipeline'
             };
             
             Object.entries(tooltips).forEach(([id, text]) => {
@@ -1390,56 +2159,45 @@
             });
         }
 
-        // Enhanced error handling for WebSocket
-        function handleWebSocketError(error) {
-            console.error('WebSocket error:', error);
-            
-            // Attempt to reconnect after a delay
-            if (isConnected) {
-                logMessage('Connection lost. Attempting to reconnect...', 'error');
-                setTimeout(() => {
-                    if (!isConnected) {
-                        connect();
-                    }
-                }, 3000);
+        // Network status monitoring
+        window.addEventListener('online', function() {
+            logMessage('🌐 Network connection restored', 'success');
+            if (!isConnected && websocket === null) {
+                setTimeout(() => connect(), 1000);
             }
-        }
+        });
 
-        // Performance monitoring
-        let performanceStats = {
-            totalRequests: 0,
-            avgYoloTime: 0,
-            avgOcrTime: 0,
-            avgTotalTime: 0
-        };
+        window.addEventListener('offline', function() {
+            logMessage('🌐 Network connection lost', 'error');
+        });
 
-        function updatePerformanceStats(yoloMs, ocrMs, totalMs) {
-            performanceStats.totalRequests++;
-            
-            // Calculate running averages
-            const n = performanceStats.totalRequests;
-            performanceStats.avgYoloTime = ((n - 1) * performanceStats.avgYoloTime + yoloMs) / n;
-            performanceStats.avgOcrTime = ((n - 1) * performanceStats.avgOcrTime + ocrMs) / n;
-            performanceStats.avgTotalTime = ((n - 1) * performanceStats.avgTotalTime + totalMs) / n;
-            
-            // Update UI every 10 requests
-            if (n % 10 === 0) {
-                logMessage(`Performance stats: Avg YOLO: ${performanceStats.avgYoloTime.toFixed(1)}ms, Avg OCR: ${performanceStats.avgOcrTime.toFixed(1)}ms, Total requests: ${n}`);
-            }
+        // Auto-expand first detection when steps are available
+        function autoExpandFirstDetection() {
+            setTimeout(() => {
+                const firstDetectionSteps = document.getElementById('detection-steps-0');
+                if (firstDetectionSteps && !firstDetectionSteps.classList.contains('expanded')) {
+                    toggleDetectionSteps(0);
+                    logMessage('🔍 Auto-expanded first detection for detailed view');
+                }
+            }, 500);
         }
 
         // Call initialization functions
         document.addEventListener('DOMContentLoaded', function() {
             initializeTooltips();
             
-            // Add some example text to help users get started
+            // Add some enhanced example text to help users get started
             setTimeout(() => {
                 if (!isConnected) {
-                    logMessage('💡 Tip: Make sure your YOLO+OCR server is running on the specified URL');
-                    logMessage('💡 Default server URL is ws://localhost:8000/ws');
-                    logMessage('💡 Use Ctrl+U to upload images, Ctrl+W for camera, Space to connect');
+                    logMessage('💡 Enhanced YOLO+OCR Pipeline v2.0 - Features:');
+                    logMessage('🎯 Linear transformation perspective correction');
+                    logMessage('✨ Step-by-step preprocessing visualization');
+                    logMessage('🔄 Advanced rotation correction with Hough transforms');
+                    logMessage('🤖 Multi-engine OCR (EasyOCR + Tesseract)');
+                    logMessage('🔍 Enable debug mode in settings for detailed step images');
+                    logMessage('⌨️ Keyboard shortcuts: Ctrl+U (upload), Ctrl+W (camera), Space (connect), 1-4 (tabs)');
                     if (isSafari) {
-                        logMessage('💡 Safari users: Allow camera permissions when prompted');
+                        logMessage('🍎 Safari users: Allow camera permissions when prompted');
                     }
                 }
             }, 2000);
@@ -1454,18 +2212,197 @@
                     webcamVideo.play().catch(console.log);
                 }
             }, { once: true });
+
+            // Handle touch gestures for step navigation
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            document.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+
+            document.addEventListener('touchend', function(e) {
+                if (!touchStartX || !touchStartY) {
+                    return;
+                }
+
+                let touchEndX = e.changedTouches[0].clientX;
+                let touchEndY = e.changedTouches[0].clientY;
+
+                let diffX = touchStartX - touchEndX;
+                let diffY = touchStartY - touchEndY;
+
+                // If swipe is primarily horizontal and significant
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 100) {
+                    // Swipe left - next tab
+                    if (diffX > 0) {
+                        const tabs = ['steps', 'ocr', 'settings', 'logs'];
+                        const current = document.querySelector('.tab-btn.active');
+                        const currentIndex = Array.from(document.querySelectorAll('.tab-btn')).indexOf(current);
+                        if (currentIndex < tabs.length - 1) {
+                            switchTab(tabs[currentIndex + 1]);
+                        }
+                    }
+                    // Swipe right - previous tab
+                    else {
+                        const tabs = ['steps', 'ocr', 'settings', 'logs'];
+                        const current = document.querySelector('.tab-btn.active');
+                        const currentIndex = Array.from(document.querySelectorAll('.tab-btn')).indexOf(current);
+                        if (currentIndex > 0) {
+                            switchTab(tabs[currentIndex - 1]);
+                        }
+                    }
+                }
+
+                touchStartX = 0;
+                touchStartY = 0;
+            });
         }
 
-        // Network status monitoring
-        window.addEventListener('online', function() {
-            logMessage('Network connection restored', 'success');
-            if (!isConnected && websocket === null) {
-                setTimeout(() => connect(), 1000);
+        // Image lazy loading for step images
+        function setupLazyLoading() {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                            observer.unobserve(img);
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+        }
+
+        // Auto-scroll to new processing steps
+        function scrollToNewSteps() {
+            const processingSteps = document.getElementById('processingsteps');
+            if (processingSteps) {
+                processingSteps.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }
+        }
+
+        // Enhanced error handling with retry mechanism
+        function handleWebSocketError(error) {
+            console.error('WebSocket error:', error);
+            
+            // Attempt to reconnect after a delay
+            if (isConnected) {
+                logMessage('🔄 Connection lost. Attempting to reconnect in 3 seconds...', 'error');
+                setTimeout(() => {
+                    if (!isConnected) {
+                        logMessage('🔄 Attempting reconnection...');
+                        connect();
+                    }
+                }, 3000);
+            }
+        }
+
+        // Export processing steps data
+        function exportProcessingSteps() {
+            if (!currentProcessingSteps || Object.keys(currentProcessingSteps).length === 0) {
+                logMessage('No processing steps to export', 'error');
+                return;
+            }
+
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                version: '2.0',
+                processing_steps: currentProcessingSteps,
+                client_info: {
+                    user_agent: navigator.userAgent,
+                    screen_resolution: `${screen.width}x${screen.height}`,
+                    browser: isSafari ? 'Safari' : 'Other'
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `processing_steps_${Date.now()}.json`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logMessage('📁 Processing steps data exported', 'success');
+        }
+
+        // Context menu for step images
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.classList.contains('step-image') && e.target.tagName === 'IMG') {
+                e.preventDefault();
+                
+                const menu = document.createElement('div');
+                menu.style.cssText = `
+                    position: fixed;
+                    top: ${e.clientY}px;
+                    left: ${e.clientX}px;
+                    background: white;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    padding: 8px 0;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    z-index: 1000;
+                    font-size: 14px;
+                `;
+                
+                const openItem = document.createElement('div');
+                openItem.textContent = '🔍 View Full Size';
+                openItem.style.cssText = 'padding: 8px 16px; cursor: pointer; hover: background: #f0f0f0;';
+                openItem.onclick = () => {
+                    e.target.click();
+                    document.body.removeChild(menu);
+                };
+                
+                const downloadItem = document.createElement('div');
+                downloadItem.textContent = '💾 Download Image';
+                downloadItem.style.cssText = 'padding: 8px 16px; cursor: pointer; hover: background: #f0f0f0;';
+                downloadItem.onclick = () => {
+                    const link = document.createElement('a');
+                    link.href = e.target.src;
+                    link.download = `step_image_${Date.now()}.jpg`;
+                    link.click();
+                    document.body.removeChild(menu);
+                };
+                
+                menu.appendChild(openItem);
+                menu.appendChild(downloadItem);
+                document.body.appendChild(menu);
+                
+                // Remove menu on click elsewhere
+                setTimeout(() => {
+                    document.addEventListener('click', function removeMenu() {
+                        if (document.body.contains(menu)) {
+                            document.body.removeChild(menu);
+                        }
+                        document.removeEventListener('click', removeMenu);
+                    });
+                }, 100);
             }
         });
 
-        window.addEventListener('offline', function() {
-            logMessage('Network connection lost', 'error');
+        // Final initialization
+        window.addEventListener('load', function() {
+            logMessage('🎉 Enhanced YOLO+OCR Pipeline v2.0 client fully loaded and ready!');
+            
+            // Auto-connect if URL is provided and looks valid
+            const serverUrl = document.getElementById('serverUrl').value;
+            if (serverUrl && serverUrl.startsWith('ws://') && !isConnected) {
+                logMessage('🔄 Auto-connecting to server...');
+                setTimeout(connect, 1000);
+            }
         });
     </script>
 </body>
